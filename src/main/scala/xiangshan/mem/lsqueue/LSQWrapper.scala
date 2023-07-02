@@ -59,8 +59,8 @@ class LsqWrapper(implicit p: Parameters) extends XSModule with HasDCacheParamete
     val brqRedirect = Flipped(ValidIO(new Redirect))
     val enq = new LsqEnqIO
     val ldu = new Bundle() {
-        val storeLoadViolationQuery = Vec(LoadPipelineWidth, Flipped(new LoadViolationQueryIO)) // from load_s2
-        val loadLoadViolationQuery = Vec(LoadPipelineWidth, Flipped(new LoadViolationQueryIO)) // from load_s2
+        val stldVioQuery = Vec(LoadPipelineWidth, Flipped(new LoadViolationQueryIO)) // from load_s2
+        val ldldVioQuery = Vec(LoadPipelineWidth, Flipped(new LoadViolationQueryIO)) // from load_s2
         val loadIn = Vec(StorePipelineWidth, Flipped(Decoupled(new LqWriteBundle))) // from load_s3
     }
     val sta = new Bundle() {

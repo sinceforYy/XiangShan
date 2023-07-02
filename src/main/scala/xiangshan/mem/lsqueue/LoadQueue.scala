@@ -156,8 +156,8 @@ class LoadQueue(implicit p: Parameters) extends XSModule
     val redirect = Flipped(Valid(new Redirect)) 
     val enq = new LqEnqIO
     val ldu = new Bundle() {
-        val storeLoadViolationQuery = Vec(LoadPipelineWidth, Flipped(new LoadViolationQueryIO)) // from load_s2
-        val loadLoadViolationQuery = Vec(LoadPipelineWidth, Flipped(new LoadViolationQueryIO)) // from load_s2
+        val stldVioQuery = Vec(LoadPipelineWidth, Flipped(new LoadViolationQueryIO)) // from load_s2
+        val ldldVioQuery = Vec(LoadPipelineWidth, Flipped(new LoadViolationQueryIO)) // from load_s2
         val loadIn = Vec(StorePipelineWidth, Flipped(Decoupled(new LqWriteBundle))) // from load_s3
     }
     val sta = new Bundle() {
@@ -206,10 +206,10 @@ class LoadQueue(implicit p: Parameters) extends XSModule
   loadQueueRAR.io.release <> io.release
   loadQueueRAR.io.ldWbPtr <> virtualLoadQueue.io.ldWbPtr
   for (w <- 0 until LoadPipelineWidth) {
-    loadQueueRAR.io.query(w).req <> io.ldu.loadLoadViolationQuery(w).req // from load_s1
-    loadQueueRAR.io.query(w).resp <> io.ldu.loadLoadViolationQuery(w).resp // to load_s2
-    loadQueueRAR.io.query(w).preReq := io.ldu.loadLoadViolationQuery(w).preReq // from load_s1
-    loadQueueRAR.io.query(w).release := io.ldu.loadLoadViolationQuery(w).release // from load_s3
+    loadQueueRAR.io.query(w).req <> io.ldu.ldldVioQuery(w).req // from load_s1
+    loadQueueRAR.io.query(w).resp <> io.ldu.ldldVioQuery(w).resp // to load_s2
+    loadQueueRAR.io.query(w).preReq := io.ldu.ldldVioQuery(w).preReq // from load_s1
+    loadQueueRAR.io.query(w).release := io.ldu.ldldVioQuery(w).release // from load_s3
   }
 
   /**
@@ -220,10 +220,10 @@ class LoadQueue(implicit p: Parameters) extends XSModule
   loadQueueRAW.io.stAddrReadySqPtr <> io.sq.stAddrReadySqPtr
   loadQueueRAW.io.stIssuePtr <> io.sq.stIssuePtr
   for (w <- 0 until LoadPipelineWidth) {
-    loadQueueRAW.io.query(w).req <> io.ldu.storeLoadViolationQuery(w).req // from load_s1
-    loadQueueRAW.io.query(w).resp <> io.ldu.storeLoadViolationQuery(w).resp // to load_s2
-    loadQueueRAW.io.query(w).preReq := io.ldu.storeLoadViolationQuery(w).preReq // from load_s1
-    loadQueueRAW.io.query(w).release := io.ldu.storeLoadViolationQuery(w).release // from load_s3
+    loadQueueRAW.io.query(w).req <> io.ldu.stldVioQuery(w).req // from load_s1
+    loadQueueRAW.io.query(w).resp <> io.ldu.stldVioQuery(w).resp // to load_s2
+    loadQueueRAW.io.query(w).preReq := io.ldu.stldVioQuery(w).preReq // from load_s1
+    loadQueueRAW.io.query(w).release := io.ldu.stldVioQuery(w).release // from load_s3
   }
 
   /**
