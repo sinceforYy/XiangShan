@@ -174,8 +174,8 @@ class XSTile()(implicit p: Parameters) extends LazyModule
       // misc.module.beu_errors.l2.ecc_error.valid := l2cache.get.module.io.ecc_error.valid
       // misc.module.beu_errors.l2.ecc_error.bits := l2cache.get.module.io.ecc_error.bits
       misc.module.beu_errors.l2 <> 0.U.asTypeOf(misc.module.beu_errors.l2)
-      core.module.io.l2Hint.bits.sourceId := l2cache.get.module.io.l2_hint.bits
-      core.module.io.l2Hint.valid := l2cache.get.module.io.l2_hint.valid
+      core.module.io.l2Hint.bits.sourceId := l2cache.get.module.io.l2Hint.bits
+      core.module.io.l2Hint.valid := l2cache.get.module.io.l2Hint.valid
     } else {
       misc.module.beu_errors.l2 <> 0.U.asTypeOf(misc.module.beu_errors.l2)
       core.module.io.l2Hint.bits.sourceId := DontCare

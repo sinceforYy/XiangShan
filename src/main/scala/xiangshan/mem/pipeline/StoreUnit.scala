@@ -29,27 +29,25 @@ import xiangshan.cache.mmu.{TlbCmd, TlbReq, TlbRequestIO, TlbResp}
 
 class StoreUnit(implicit p: Parameters) extends XSModule {
   val io = IO(new Bundle() {
-    val redirect = Flipped(ValidIO(new Redirect))
-
-    val stin = Flipped(Decoupled(new ExuInput))
-    val issue = Valid(new ExuInput)
-    val tlb = new TlbRequestIO()
-    val pmp = Flipped(new PMPRespBundle())
-    val rsIdx = Input(UInt(log2Up(IssQueSize).W))
-    val isFirstIssue = Input(Bool())
-    val lsq = ValidIO(new LsPipelineBundle)
-    val lsq_replenish = Output(new LsPipelineBundle())
-    val feedbackSlow = ValidIO(new RSFeedback)
-    val reExecuteQuery = Valid(new LoadReExecuteQueryIO)
-    val stout = DecoupledIO(new ExuOutput) // writeback store
-
+    val redirect        = Flipped(ValidIO(new Redirect))
+    val stin            = Flipped(Decoupled(new ExuInput))
+    val issue           = Valid(new ExuInput)
+    val tlb             = new TlbRequestIO()
+    val pmp             = Flipped(new PMPRespBundle())
+    val rsIdx           = Input(UInt(log2Up(IssQueSize).W))
+    val isFirstIssue    = Input(Bool())
+    val lsq             = ValidIO(new LsPipelineBundle)
+    val lsq_replenish   = Output(new LsPipelineBundle())
+    val feedback_slow   = ValidIO(new RSFeedback)
+    val stld_nuke_query = Valid(new StoreNukeQueryIO)
+    val stout           = DecoupledIO(new ExuOutput) // writeback store
     // store mask, send to sq in store_s0
-    val storeMaskOut = Valid(new StoreMaskBundle)
-    val debug_ls = Output(new DebugLsInfoBundle)
+    val st_mask_out     = Valid(new StoreMaskBundle)
+    val debug_ls        = Output(new DebugLsInfoBundle)
   })
 
 
-  val s1_ready, s2_ready, s3_ready, dummy_ready = WireInit(false.B)
+  val s1_ready, s2_ready, s3_ready = WireInit(false.B)
 
   // Pipeline
   // --------------------------------------------------------------------------------
@@ -105,17 +103,19 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
   }  
 
   // exception check
-  val s0_addrAligned = LookupTree(s0_in.uop.ctrl.fuOpType(1,0), List(
+  val s0_addr_aligned = LookupTree(s0_in.uop.ctrl.fuOpType(1,0), List(
     "b00".U   -> true.B,              //b
     "b01".U   -> (s0_out.vaddr(0) === 0.U),   //h
     "b10".U   -> (s0_out.vaddr(1,0) === 0.U), //w
     "b11".U   -> (s0_out.vaddr(2,0) === 0.U)  //d
   ))
-  s0_out.uop.cf.exceptionVec(storeAddrMisaligned) := !s0_addrAligned
+  s0_out.uop.cf.exceptionVec(storeAddrMisaligned) := !s0_addr_aligned
 
-  io.storeMaskOut.valid       := s0_valid
-  io.storeMaskOut.bits.mask   := s0_out.mask 
-  io.storeMaskOut.bits.sqIdx  := s0_out.uop.sqIdx 
+  io.st_mask_out.valid       := s0_valid
+  io.st_mask_out.bits.mask   := s0_out.mask 
+  io.st_mask_out.bits.sqIdx  := s0_out.uop.sqIdx 
+
+  io.stin.ready := s1_ready
 
   // Pipeline
   // --------------------------------------------------------------------------------
@@ -125,7 +125,7 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
   val s1_valid  = RegInit(false.B)
   val s1_in     = RegEnable(s0_out, s0_fire)
   val s1_out    = Wire(new LsPipelineBundle)
-  val s1_kill   = s1_in.uop.robIdx.needFlush(io.redirect)
+  val s1_kill   = Wire(Bool()) 
   val s1_can_go = s2_ready
   val s1_fire   = s1_valid && !s1_kill && s1_can_go
 
@@ -137,7 +137,8 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
   val s1_tlb_miss  = io.tlb.resp.bits.miss
   val s1_mmio      = s1_mmio_cbo
   val s1_exception = ExceptionNO.selectByFu(s1_out.uop.cf.exceptionVec, staCfg).asUInt.orR
-
+  s1_kill := s1_in.uop.robIdx.needFlush(io.redirect) || s1_tlb_miss
+  
   s1_ready := !s1_valid || s1_kill || s2_ready
   io.tlb.resp.ready := true.B // TODO: why dtlbResp needs a ready?
   when (s0_fire) { s1_valid := true.B } 
@@ -145,24 +146,24 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
   .elsewhen (s1_kill) { s1_valid := false.B }
 
   // st-ld violation dectect request.
-  io.reExecuteQuery.valid       := s1_valid && !s1_tlb_miss
-  io.reExecuteQuery.bits.robIdx := s1_in.uop.robIdx
-  io.reExecuteQuery.bits.paddr  := s1_paddr
-  io.reExecuteQuery.bits.mask   := s1_in.mask
+  io.stld_nuke_query.valid       := s1_valid && !s1_tlb_miss
+  io.stld_nuke_query.bits.robIdx := s1_in.uop.robIdx
+  io.stld_nuke_query.bits.paddr  := s1_paddr
+  io.stld_nuke_query.bits.mask   := s1_in.mask
 
   // Send TLB feedback to store issue queue
   // Store feedback is generated in store_s1, sent to RS in store_s2
-  io.feedbackSlow.valid           := s1_valid
-  io.feedbackSlow.bits.hit        := !s1_tlb_miss
-  io.feedbackSlow.bits.flushState := io.tlb.resp.bits.ptwBack
-  io.feedbackSlow.bits.rsIdx      := s1_in.rsIdx
-  io.feedbackSlow.bits.sourceType := RSFeedbackType.tlbMiss
-  XSDebug(io.feedbackSlow.valid,
+  io.feedback_slow.valid           := s1_fire
+  io.feedback_slow.bits.hit        := !s1_tlb_miss
+  io.feedback_slow.bits.flushState := io.tlb.resp.bits.ptwBack
+  io.feedback_slow.bits.rsIdx      := s1_in.rsIdx
+  io.feedback_slow.bits.sourceType := RSFeedbackType.tlbMiss
+  XSDebug(io.feedback_slow.valid,
     "S1 Store: tlbHit: %d robIdx: %d\n",
-    io.feedbackSlow.bits.hit,
-    io.feedbackSlow.bits.rsIdx
+    io.feedback_slow.bits.hit,
+    io.feedback_slow.bits.rsIdx
   )
-  io.feedbackSlow.bits.dataInvalidSqIdx := DontCare
+  io.feedback_slow.bits.dataInvalidSqIdx := DontCare
 
   // issue
   io.issue.valid := s1_valid && !s1_tlb_miss
@@ -170,7 +171,7 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
 
   // get paddr from dtlb, check if rollback is needed
   // writeback store inst to lsq
-  s1_out             := s1_in
+  s1_out        := s1_in
   s1_out.paddr  := s1_paddr
   s1_out.miss   := false.B
   s1_out.mmio   := s1_mmio
@@ -197,7 +198,7 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
   val s2_valid  = RegInit(false.B)
   val s2_in     = RegEnable(s1_out, s1_fire)
   val s2_out    = Wire(new LsPipelineBundle)
-  val s2_kill   = s2_in.uop.robIdx.needFlush(io.redirect)
+  val s2_kill   = Wire(Bool())
   val s2_can_go = s3_ready
   val s2_fire   = s2_valid && !s2_kill && s2_can_go
 
@@ -215,17 +216,30 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
     s2_pmp.mmio  := s2_static_pm.bits
   }
 
-  val s2_exception = ExceptionNO.selectByFu(s1_in.uop.cf.exceptionVec, staCfg).asUInt.orR
+  val s2_exception = ExceptionNO.selectByFu(s2_out.uop.cf.exceptionVec, staCfg).asUInt.orR
   val s2_mmio = s2_in.mmio || s2_pmp.mmio
+  s2_kill := (s2_mmio && !s2_exception) || s2_in.uop.robIdx.needFlush(io.redirect)
 
   s2_out        := s2_in
-  s2_out.mmio   := s2_mmio && s2_exception
+  s2_out.mmio   := s2_mmio && !s2_exception
   s2_out.atomic := s2_in.atomic || s2_pmp.atomic
   s2_out.uop.cf.exceptionVec(storeAccessFault) := s2_in.uop.cf.exceptionVec(storeAccessFault) || s2_pmp.st
 
   // feedback tlb miss to RS in store_s2
-  io.feedbackSlow.valid := RegNext(io.feedbackSlow.valid && !s1_out.uop.robIdx.needFlush(io.redirect))
-  io.feedbackSlow.bits  := RegNext(io.feedbackSlow.bits)
+  val s1_feedback = Wire(Valid(new RSFeedback))
+  s1_feedback.valid                 := s1_valid 
+  s1_feedback.bits.hit              := !s1_tlb_miss
+  s1_feedback.bits.flushState       := io.tlb.resp.bits.ptwBack
+  s1_feedback.bits.rsIdx            := s1_out.rsIdx
+  s1_feedback.bits.sourceType       := RSFeedbackType.tlbMiss
+  s1_feedback.bits.dataInvalidSqIdx := DontCare
+  XSDebug(s1_feedback.valid,
+    "S1 Store: tlbHit: %d robIdx: %d\n",
+    s1_feedback.bits.hit,
+    s1_feedback.bits.rsIdx
+  )
+  io.feedback_slow.valid := RegNext(s1_feedback.valid && !s1_out.uop.robIdx.needFlush(io.redirect))
+  io.feedback_slow.bits  := RegNext(s1_feedback.bits)
 
   // mmio and exception
   io.lsq_replenish := s2_out
@@ -237,12 +251,12 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
   // store write back
   val s3_valid  = RegInit(false.B)
   val s3_in     = RegEnable(s2_out, s2_fire)
-  val s3_out    = Wire(new LsPipelineBundle)
+  val s3_out    = Wire(new ExuOutput)
   val s3_kill   = s3_in.uop.robIdx.needFlush(io.redirect)
   val s3_can_go = s3_ready
-  val s3_fire   = s3_valid && s3_can_go
+  val s3_fire   = s3_valid && !s3_kill && s3_can_go
 
-  when (s2_fire) { s3_valid := (!s2_mmio || s2_exception)  } 
+  when (s2_fire) { s3_valid := !s2_mmio || s2_exception  } 
   .elsewhen (s3_fire) { s3_valid := false.B }
   .elsewhen (s3_kill) { s3_valid := false.B }
 
@@ -251,17 +265,16 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
   val lgSelectGroupSize = log2Ceil(SelectGroupSize)
   val TotalSelectCycles = scala.math.ceil(log2Ceil(LoadQueueRAWSize).toFloat / lgSelectGroupSize).toInt + 1
 
-  val stout = Wire(new ExuOutput)
-  stout                 := DontCare
-  stout.uop             := s3_in.uop
-  stout.data            := DontCare
-  stout.redirectValid   := false.B
-  stout.redirect        := DontCare
-  stout.debug.isMMIO    := s3_in.mmio
-  stout.debug.paddr     := s3_in.paddr
-  stout.debug.vaddr     := s3_in.vaddr
-  stout.debug.isPerfCnt := false.B
-  stout.fflags          := DontCare
+  s3_out                 := DontCare
+  s3_out.uop             := s3_in.uop
+  s3_out.data            := DontCare
+  s3_out.redirectValid   := false.B
+  s3_out.redirect        := DontCare
+  s3_out.debug.isMMIO    := s3_in.mmio
+  s3_out.debug.paddr     := s3_in.paddr
+  s3_out.debug.vaddr     := s3_in.vaddr
+  s3_out.debug.isPerfCnt := false.B
+  s3_out.fflags          := DontCare
 
   // Pipeline
   // --------------------------------------------------------------------------------
@@ -271,34 +284,34 @@ class StoreUnit(implicit p: Parameters) extends XSModule {
   val TotalDelayCycles = TotalSelectCycles - 2
   val sx_valid = Wire(Vec(TotalDelayCycles + 1, Bool()))
   val sx_ready = Wire(Vec(TotalDelayCycles + 1, Bool()))
-  val sx_in    = Wire(Vec(TotalSelectCycles + 1, new ExuOutput))
-
+  val sx_in    = Wire(Vec(TotalDelayCycles + 1, new ExuOutput))
 
   // backward ready signal
-  s3_ready := !sx_valid.head || sx_in.head.uop.robIdx.needFlush(io.redirect) || sx_ready.head
-  sx_ready.tail(0) := io.stout.ready
+  s3_ready := sx_ready.head
   for (i <- 0 until TotalDelayCycles + 1) {
     if (i == 0) {
       sx_valid(i) := s3_valid
-      sx_in(i)    := stout
+      sx_in(i)    := s3_out
+      sx_ready(i) := !s3_valid(i) || sx_in(i).uop.robIdx.needFlush(io.redirect) || (if (TotalDelayCycles == 0) io.stout.ready else sx_ready(i+1))
     } else {
-      val cur_valid  = sx_valid(i)
-      val cur_in     = sx_in(i)
-      val cur_kill   = cur_in.uop.robIdx.needFlush(io.redirect)
-      val cur_can_go = sx_ready(i+1)
-      val cur_fire   = cur_valid && !cur_kill && cur_can_go
+      val cur_kill   = sx_in(i).uop.robIdx.needFlush(io.redirect)
+      val cur_can_go = (if (i == TotalDelayCycles) io.stout.ready else sx_ready(i+1))
+      val cur_fire   = sx_valid(i) && !cur_kill && cur_can_go
       val prev_fire  = sx_valid(i-1) && !sx_in(i-1).uop.robIdx.needFlush(io.redirect) && sx_ready(i)
 
       sx_ready(i) := !sx_valid(i) || cur_kill || (if (i == TotalDelayCycles) io.stout.ready else sx_ready(i+1))
-      when (prev_fire) { sx_valid(i) := true.B }
-      .elsewhen(cur_fire) { sx_valid(i) := false.B }
-      .elsewhen(cur_kill) { sx_valid(i) := false.B }
+      val sx_valid_can_go = prev_fire || cur_fire || cur_kill
+      sx_valid(i) := RegEnable(Mux(prev_fire, true.B, false.B), sx_valid_can_go)
       sx_in(i) := RegEnable(sx_in(i-1), prev_fire)
     }
   }
+  val sx_last_valid = sx_valid.takeRight(1).head
+  val sx_last_ready = sx_ready.takeRight(1).head
+  val sx_last_in    = sx_in.takeRight(1).head
+  sx_last_ready := !sx_last_valid || sx_last_in.uop.robIdx.needFlush(io.redirect) || io.stout.ready
 
-  io.stout.valid := sx_valid.tail(0) && !sx_in.tail(0).uop.robIdx.needFlush(io.redirect)
-  io.stout.bits := sx_in.tail(0)
+  io.stout.valid := sx_last_valid && !sx_last_in.uop.robIdx.needFlush(io.redirect)
+  io.stout.bits := sx_last_in
 
   io.debug_ls := DontCare
   io.debug_ls.s1.isTlbFirstMiss := io.tlb.resp.valid && io.tlb.resp.bits.miss && io.tlb.resp.bits.debug.isFirstIssue
