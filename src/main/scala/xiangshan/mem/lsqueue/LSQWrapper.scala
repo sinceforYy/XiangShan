@@ -96,7 +96,7 @@ class LsqWrapper(implicit p: Parameters) extends XSModule with HasDCacheParamete
     val exceptionAddr = new ExceptionAddrIO
     val trigger = Vec(LoadPipelineWidth, new LqTriggerIO)
     val issuePtrExt = Output(new SqPtr)
-    val l2Hint = Input(Valid(new L2ToL1Hint()))
+    val l2_hint = Input(Valid(new L2ToL1Hint()))
   })
 
   val loadQueue = Module(new LoadQueue)
@@ -176,7 +176,7 @@ class LsqWrapper(implicit p: Parameters) extends XSModule with HasDCacheParamete
   loadQueue.io.lqFull              <> io.lqFull
   loadQueue.io.lq_rep_full         <> io.lq_rep_full
   loadQueue.io.lqDeq               <> io.lqDeq
-  loadQueue.io.l2Hint              <> io.l2Hint
+  loadQueue.io.l2_hint             <> io.l2_hint
 
   // rob commits for lsq is delayed for two cycles, which causes the delayed update for deqPtr in lq/sq
   // s0: commit

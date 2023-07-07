@@ -178,7 +178,7 @@ class LoadQueueReplay(implicit p: Parameters) extends XSModule
     val ldWbPtr = Input(new LqPtr)
     val rarFull = Input(Bool())
     val rawFull = Input(Bool())
-    val l2Hint  = Input(Valid(new L2ToL1Hint()))
+    val l2_hint  = Input(Valid(new L2ToL1Hint()))
     val tlbReplayDelayCycleCtrl = Vec(4, Input(UInt(ReSelectLen.W))) 
   })
 
@@ -364,7 +364,7 @@ class LoadQueueReplay(implicit p: Parameters) extends XSModule
   // l2 hint wakes up cache missed load
   // l2 will send GrantData in next 2/3 cycle, wake up the missed load early and sent them to load pipe, so them will hit the data in D channel or mshr in load S1
   val s0_loadHintWakeMask = VecInit((0 until LoadQueueReplaySize).map(i => {
-    allocated(i) && !scheduled(i) && blockByCacheMiss(i) && missMSHRId(i) === io.l2Hint.bits.sourceId && io.l2Hint.valid
+    allocated(i) && !scheduled(i) && blockByCacheMiss(i) && missMSHRId(i) === io.l2_hint.bits.sourceId && io.l2_hint.valid
   })).asUInt()
   // l2 will send 2 beats data in 2 cycles, so if data needed by this load is in first beat, select it this cycle, otherwise next cycle
   val s0_loadHintSelMask = s0_loadHintWakeMask & VecInit(dataInLastBeatReg.map(!_)).asUInt
@@ -426,7 +426,7 @@ class LoadQueueReplay(implicit p: Parameters) extends XSModule
     val ageOldestIndexOH = ageOldest.bits
 
     // select program order oldest
-    val l2HintFirst = io.l2Hint.valid && s0_remOldestHintSelVec(rport).orR
+    val l2HintFirst = io.l2_hint.valid && s0_remOldestHintSelVec(rport).orR
     val issOldestValid = l2HintFirst || s0_remOldestSelVec(rport).orR
     val issOldestIndexOH = Mux(l2HintFirst, PriorityEncoderOH(s0_remOldestHintSelVec(rport)), PriorityEncoderOH(s0_remOldestSelVec(rport)))
 

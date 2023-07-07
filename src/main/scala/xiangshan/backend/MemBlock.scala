@@ -118,7 +118,7 @@ class MemBlockImp(outer: MemBlock) extends LazyModuleImp(outer)
     val lqDeq = Output(UInt(log2Up(CommitWidth + 1).W))
     val debug_ls = new DebugLSIO
     val lsTopdownInfo = Vec(exuParameters.LduCnt, Output(new LsTopdownInfo))
-    val l2Hint = Input(Valid(new L2ToL1Hint()))
+    val l2_hint = Input(Valid(new L2ToL1Hint()))
   })
 
   override def writebackSource1: Option[Seq[Seq[DecoupledIO[ExuOutput]]]] = Some(Seq(io.writeback))
@@ -447,7 +447,7 @@ class MemBlockImp(outer: MemBlock) extends LazyModuleImp(outer)
     loadUnits(i).io.ld_fast_imm := io.loadFastImm(i)
     loadUnits(i).io.replay <> lsq.io.replay(i)
 
-    loadUnits(i).io.l2_hint <> io.l2Hint
+    loadUnits(i).io.l2_hint <> io.l2_hint
 
     // passdown to lsq (load s2)
     lsq.io.ldu.ldin(i) <> loadUnits(i).io.lsq.ldin
@@ -455,8 +455,8 @@ class MemBlockImp(outer: MemBlock) extends LazyModuleImp(outer)
     lsq.io.ld_raw_data(i) <> loadUnits(i).io.lsq.ld_raw_data
     lsq.io.trigger(i) <> loadUnits(i).io.lsq.trigger
 
-    lsq.io.l2Hint.valid := io.l2Hint.valid
-    lsq.io.l2Hint.bits.sourceId := io.l2Hint.bits.sourceId
+    lsq.io.l2_hint.valid := io.l2_hint.valid
+    lsq.io.l2_hint.bits.sourceId := io.l2_hint.bits.sourceId
 
     // alter writeback exception info
     io.s3_delayed_load_error(i) := loadUnits(i).io.s3_delayed_load_error
