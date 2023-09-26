@@ -44,13 +44,15 @@ class Mgu(vlen: Int)(implicit p: Parameters) extends  Module {
   val oldVd = in.oldVd
   val narrow = io.in.info.narrow
 
+  // vdidx single or widen 0~7, narrow 0~3
   private val vdIdx = Mux(narrow, info.vdIdx(2, 1), info.vdIdx)
 
   private val maskTailGen = Module(new ByteMaskTailGen(vlen))
 
   private val eewOH = SewOH(info.eew).oneHot
-
+  // vstart映射到vdidx
   private val vstartMapVdIdx = elemIdxMapVdIdx(info.vstart)(2, 0) // 3bits 0~7
+  // vl映射到vdidx
   private val vlMapVdIdx = elemIdxMapVdIdx(info.vl)(3, 0)         // 4bits 0~8
   private val uvlMax = numBytes.U >> info.eew
   private val uvlMaxForAssert = numBytes.U >> info.vsew

@@ -36,10 +36,11 @@ object FuType {
   val vfalu = OHInt(25)
   val vfma  = OHInt(26)
   val vfdiv = OHInt(27) // Todo
+  val vfcvt = OHInt(28)
 
   def X = BitPat.N(num) // Todo: Don't Care
 
-  def num = 28
+  def num = 29
 
   def width = num
 
