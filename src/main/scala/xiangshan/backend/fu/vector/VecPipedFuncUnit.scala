@@ -88,7 +88,7 @@ class VecPipedFuncUnit(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(c
   protected val outVm       = outVecCtrl.vm
 
   // vadc.vv, vsbc.vv need this
-  protected val outNeedClearMask: Bool = VialuFixType.needClearMask(outCtrl.fuOpType)
+  protected val outNeedClearMask: Bool = if (cfg == FuConfig.VialuCfg) VialuFixType.needClearMask(outCtrl.fuOpType) else false.B
 
   protected val outVConfig  = if(!cfg.vconfigWakeUp) outCtrl.vpu.get.vconfig else outData.getSrcVConfig.asTypeOf(new VConfig)
   protected val outVl       = outVConfig.vl
