@@ -27,6 +27,7 @@ SIM_TOP_V = $(BUILD_DIR)/$(SIM_TOP).v
 
 SCALA_FILE = $(shell find ./src/main/scala -name '*.scala')
 TEST_FILE = $(shell find ./src/test/scala -name '*.scala')
+VERILOG_FILE = $(shell cp ./src/main/resources/*.v ../build)
 
 MEM_GEN = ./scripts/vlsi_mem_gen
 MEM_GEN_SEP = ./scripts/gen_sep_mem.sh
@@ -113,7 +114,7 @@ endif
 
 verilog: $(TOP_V)
 
-$(SIM_TOP_V): $(SCALA_FILE) $(TEST_FILE)
+$(SIM_TOP_V): $(SCALA_FILE) $(TEST_FILE) $(VERILOG_FILE)
 	mkdir -p $(@D)
 	@echo "\n[mill] Generating Verilog files..." > $(TIMELOG)
 	@date -R | tee -a $(TIMELOG)

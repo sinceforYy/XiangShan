@@ -106,11 +106,8 @@ class ExeUnitImp(
       clk_en := true.B
     }
 
-    val clk_gate = Module(new ClockGate)
-    clk_gate.io.TE := false.B
-    clk_gate.io.E := clk_en
-    clk_gate.io.CK := clock
-    fu.clock := clk_gate.io.Q
+    val clk_gate = ClockGate(clock, clk_en)
+    fu.clock := clk_gate
     fu
   }
 
