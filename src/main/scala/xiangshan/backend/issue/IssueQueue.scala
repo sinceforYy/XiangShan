@@ -907,16 +907,24 @@ class IssueQueueMemAddrImp(override val wrapper: IssueQueue)(implicit p: Paramet
       val uop = loadWakeUpIter.next()
 
       wakeup.valid := RegNext(uop.fire)
+      // wakeup.bits.rfWen  := RegEnable(uop.bits.rfWen  && uop.fire, uop.fire)
+      // wakeup.bits.fpWen  := RegEnable(uop.bits.fpWen  && uop.fire, uop.fire)
+      // wakeup.bits.vecWen := RegEnable(uop.bits.vecWen && uop.fire, uop.fire)
+      // wakeup.bits.pdest  := RegEnable(uop.bits.pdest, uop.fire)
       wakeup.bits.rfWen  := RegNext(uop.bits.rfWen  && uop.fire)
       wakeup.bits.fpWen  := RegNext(uop.bits.fpWen  && uop.fire)
       wakeup.bits.vecWen := RegNext(uop.bits.vecWen && uop.fire)
-      wakeup.bits.pdest  := RegNext(uop.bits.pdest)
+      wakeup.bits.pdest  := RegEnable(uop.bits.pdest, uop.fire)
       wakeup.bits.loadDependency.foreach(_ := 0.U) // this is correct for load only
 
+      // wakeup.bits.rfWenCopy .foreach(_.foreach(_ := RegEnable(uop.bits.rfWen  && uop.fire, uop.fire)))
+      // wakeup.bits.fpWenCopy .foreach(_.foreach(_ := RegEnable(uop.bits.fpWen  && uop.fire, uop.fire)))
+      // wakeup.bits.vecWenCopy.foreach(_.foreach(_ := RegEnable(uop.bits.vecWen && uop.fire, uop.fire)))
+      // wakeup.bits.pdestCopy .foreach(_.foreach(_ := RegEnable(uop.bits.pdest, uop.fire)))
       wakeup.bits.rfWenCopy .foreach(_.foreach(_ := RegNext(uop.bits.rfWen  && uop.fire)))
       wakeup.bits.fpWenCopy .foreach(_.foreach(_ := RegNext(uop.bits.fpWen  && uop.fire)))
       wakeup.bits.vecWenCopy.foreach(_.foreach(_ := RegNext(uop.bits.vecWen && uop.fire)))
-      wakeup.bits.pdestCopy .foreach(_.foreach(_ := RegNext(uop.bits.pdest)))
+      wakeup.bits.pdestCopy .foreach(_.foreach(_ := RegEnable(uop.bits.pdest, uop.fire)))
       wakeup.bits.loadDependencyCopy.foreach(x => x := 0.U.asTypeOf(x)) // this is correct for load only
 
       wakeup.bits.is0Lat := 0.U

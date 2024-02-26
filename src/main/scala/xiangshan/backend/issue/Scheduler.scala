@@ -154,6 +154,7 @@ abstract class SchedulerImpBase(wrapper: Scheduler)(implicit params: SchdBlockPa
         wb.valid := io.intWriteBack(i).wen && io.intWriteBack(i).intWen
         wb.bits := io.intWriteBack(i).addr
       }
+//      bt.io.regEnable := dispatch2Iq.io.in.map(_.valid)
       bt.io.wakeUp := io.fromSchedulers.wakeupVec
       bt.io.cancel := io.fromDataPath.cancelToBusyTable
       bt.io.ldCancel := io.ldCancel
@@ -170,6 +171,7 @@ abstract class SchedulerImpBase(wrapper: Scheduler)(implicit params: SchdBlockPa
         wb.valid := io.vfWriteBack(i).wen && (io.vfWriteBack(i).fpWen || io.vfWriteBack(i).vecWen)
         wb.bits := io.vfWriteBack(i).addr
       }
+//      bt.io.regEnable := dispatch2Iq.io.in.map(_.valid)
       bt.io.wakeUp := io.fromSchedulers.wakeupVec
       bt.io.cancel := io.fromDataPath.cancelToBusyTable
       bt.io.ldCancel := io.ldCancel

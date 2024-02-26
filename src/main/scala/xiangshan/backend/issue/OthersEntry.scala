@@ -2,6 +2,7 @@ package xiangshan.backend.issue
 
 import org.chipsalliance.cde.config.Parameters
 import chisel3._
+import chisel3.util._
 import utility.HasCircularQueuePtrHelper
 import utils.{OptionWrapper}
 import xiangshan._
@@ -21,7 +22,7 @@ class OthersEntry(isComp: Boolean)(implicit p: Parameters, params: IssueBlockPar
   val io = IO(new OthersEntryIO)
 
   val validReg        = RegInit(false.B)
-  val entryReg        = Reg(new EntryBundle)
+  // val entryReg        = Reg(new EntryBundle)
 
   val common          = Wire(new CommonWireBundle)
   val entryUpdate     = Wire(new EntryBundle)
@@ -29,8 +30,9 @@ class OthersEntry(isComp: Boolean)(implicit p: Parameters, params: IssueBlockPar
   val hasWakeupIQ     = OptionWrapper(params.hasIQWakeUp, Wire(new CommonIQWakeupBundle))
 
   //Reg
+  val entryReg = RegEnable(entryRegNext, validReg || common.validRegNext)
   validReg := common.validRegNext
-  entryReg := entryRegNext
+  //entryReg := entryRegNext
 
   //Wire
   CommonWireConnect(common, hasWakeupIQ, validReg, entryReg.status, io.commonIn, false)

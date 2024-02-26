@@ -35,6 +35,8 @@ class BusyTableReadIO(implicit p: Parameters) extends XSBundle {
 
 class BusyTable(numReadPorts: Int, numWritePorts: Int, numPhyPregs: Int, pregWB: PregWB)(implicit p: Parameters, params: SchdBlockParams) extends XSModule with HasPerfEvents {
   val io = IO(new Bundle() {
+    // clock gate
+//    val regEnable = Vec(params.numUopIn, Flipped(Bool()))
     // set preg state to busy
     val allocPregs = Vec(RenameWidth, Flipped(ValidIO(UInt(PhyRegIdxWidth.W))))
     // set preg state to ready (write back regfile + rob walk)
@@ -51,7 +53,7 @@ class BusyTable(numReadPorts: Int, numWritePorts: Int, numPhyPregs: Int, pregWB:
 
   val loadDependency = RegInit(0.U.asTypeOf(Vec(numPhyPregs, Vec(LoadPipelineWidth, UInt(3.W)))))
   val shiftLoadDependency = Wire(Vec(io.wakeUp.size, Vec(LoadPipelineWidth, UInt(3.W))))
-  val table = RegInit(0.U(numPhyPregs.W))
+//  val table = RegInit(0.U(numPhyPregs.W))
   val tableUpdate = Wire(Vec(numPhyPregs, Bool()))
   val wakeupOHVec = Wire(Vec(numPhyPregs, UInt(io.wakeUp.size.W)))
 
@@ -83,14 +85,26 @@ class BusyTable(numReadPorts: Int, numWritePorts: Int, numPhyPregs: Int, pregWB:
     case _: IntWB => ParallelOR(io.cancel.map(x => Mux(x.valid && x.bits.rfWen, UIntToOH(x.bits.pdest), 0.U)))
     case _: VfWB => ParallelOR(io.cancel.map(x => Mux(x.valid && (x.bits.fpWen || x.bits.vecWen), UIntToOH(x.bits.pdest), 0.U)))
   }
+//  val loadDependencyUpdate = WireInit(0.U.asTypeOf(Vec(numPhyPregs, Vec(LoadPipelineWidth, UInt(3.W)))))
+  //  val loadDependency = RegInit(0.U.asTypeOf(Vec(numPhyPregs, Vec(LoadPipelineWidth, UInt(3.W)))))
+//  val ldCancelMask = Wire(Vec(numPhyPregs, Bool()))
+//  val loadDependency = VecInit((0 until numPhyPregs).zip(loadDependencyUpdate).map{ case (idx, ldDpUpdate) =>
+//    VecInit(ldDpUpdate.map(x =>
+//      RegEnable(x, 0.U(3.W), allocMask(idx) || cancelMask(idx) || wbMask(idx) || ldCancelMask(idx) || wakeUpMask(idx) || io.read.map(x => x.req(idx)).reduce(_||_))
+//    ))
+//  })
+//  ldCancelMask := loadDependency.map(x => LoadShouldCancel(Some(x), io.ldCancel))
   val ldCancelMask = loadDependency.map(x => LoadShouldCancel(Some(x), io.ldCancel))
 
+//  loadDependencyUpdate.zipWithIndex.foreach{ case (ldDp, idx) =>
   loadDependency.zipWithIndex.foreach{ case (ldDp, idx) =>
     when(allocMask(idx) || cancelMask(idx) || wbMask(idx) || ldCancelMask(idx)) {
       ldDp := 0.U.asTypeOf(ldDp)
     }.elsewhen(wakeUpMask(idx)) {
       ldDp := (if (io.wakeUp.nonEmpty) Mux1H(wakeupOHVec(idx), shiftLoadDependency) else 0.U.asTypeOf(ldDp))
-    }.otherwise {
+//    }.elsewhen(io.regEnable.asUInt.orR || ldDp.map(x => x.orR).reduce(_ | _)) {
+    }.elsewhen(ldDp.map(x => x.orR).reduce(_ | _)) {
+//      ldDp := VecInit(loadDependency(idx).map(x => x(x.getWidth - 2, 0) << 1))
       ldDp := VecInit(ldDp.map(x => x(x.getWidth - 2, 0) << 1))
     }
   }
@@ -104,6 +118,10 @@ class BusyTable(numReadPorts: Int, numWritePorts: Int, numPhyPregs: Int, pregWB:
     rename alloc => wbMask  //TODO we still need wbMask because wakeUp signal is partial now
   the bypass state lasts for a maximum of one cycle, cancel(=> busy) or else(=> regFile)
    */
+  val table = VecInit((0 until numPhyPregs).zip(tableUpdate).map{ case (idx, update) =>
+    RegEnable(update, 0.U(1.W), allocMask(idx) || cancelMask(idx) || ldCancelMask(idx) || wakeUpMask(idx) || wbMask(idx))
+  }).asUInt
+
   tableUpdate.zipWithIndex.foreach{ case (update, idx) =>
     when(allocMask(idx) || cancelMask(idx) || ldCancelMask(idx)) {
       update := true.B                                    //busy
@@ -119,7 +137,7 @@ class BusyTable(numReadPorts: Int, numWritePorts: Int, numPhyPregs: Int, pregWB:
     res.loadDependency := loadDependency(res.req)
   }
 
-  table := tableUpdate.asUInt
+//  table := tableUpdate.asUInt
 
   val oddTable = table.asBools.zipWithIndex.filter(_._2 % 2 == 1).map(_._1)
   val evenTable = table.asBools.zipWithIndex.filter(_._2 % 2 == 0).map(_._1)

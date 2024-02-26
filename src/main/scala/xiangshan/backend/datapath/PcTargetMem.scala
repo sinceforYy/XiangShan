@@ -2,6 +2,7 @@ package xiangshan.backend
 
 import org.chipsalliance.cde.config.Parameters
 import chisel3._
+import chisel3.util._
 import chisel3.util.log2Up
 import freechips.rocketchip.diplomacy.{LazyModule, LazyModuleImp}
 import utility._
@@ -25,9 +26,10 @@ class PcTargetMemImp(override val wrapper: PcTargetMem)(implicit p: Parameters, 
   private val jumpTargetVec     : Vec[UInt] = Wire(Vec(params.numTargetReadPort, UInt(VAddrData().dataWidth.W)))
 
   targetMem.io.wen.head := RegNext(io.fromFrontendFtq.pc_mem_wen)
-  targetMem.io.waddr.head := RegNext(io.fromFrontendFtq.pc_mem_waddr)
-  targetMem.io.wdata.head := RegNext(io.fromFrontendFtq.pc_mem_wdata)
+  targetMem.io.waddr.head := RegEnable(io.fromFrontendFtq.pc_mem_waddr, io.fromFrontendFtq.pc_mem_wen)
+  targetMem.io.wdata.head := RegEnable(io.fromFrontendFtq.pc_mem_wdata, io.fromFrontendFtq.pc_mem_wen)
 
+  private val newestEn: Bool = io.fromFrontendFtq.newest_entry_en
   private val newestTarget: UInt = io.fromFrontendFtq.newest_entry_target
   for (i <- 0 until params.numTargetReadPort) {
     val targetPtr = io.fromDataPathFtq(i)
@@ -37,7 +39,8 @@ class PcTargetMemImp(override val wrapper: PcTargetMem)(implicit p: Parameters, 
     val needNewestTarget = RegNext(targetPtr === io.fromFrontendFtq.newest_entry_ptr)
     jumpTargetVec(i) := Mux(
       needNewestTarget,
-      RegNext(newestTarget),
+      RegEnable(newestTarget, newestEn),
+      // RegNext(newestTarget),
       jumpTargetReadVec(i)
     )
   }

@@ -102,7 +102,8 @@ class CtrlBlockImp(
   s1_robFlushRedirect.bits := RegEnable(s0_robFlushRedirect.bits, s0_robFlushRedirect.valid)
 
   pcMem.io.raddr(pcMemRdIndexes("robFlush").head) := s0_robFlushRedirect.bits.ftqIdx.value
-  private val s1_robFlushPc = pcMem.io.rdata(pcMemRdIndexes("robFlush").head).getPc(RegNext(s0_robFlushRedirect.bits.ftqOffset))
+  // private val s1_robFlushPc = pcMem.io.rdata(pcMemRdIndexes("robFlush").head).getPc(RegNext(s0_robFlushRedirect.bits.ftqOffset))
+  private val s1_robFlushPc = pcMem.io.rdata(pcMemRdIndexes("robFlush").head).getPc(RegEnable(s0_robFlushRedirect.bits.ftqOffset, s0_robFlushRedirect.valid))
   private val s3_redirectGen = redirectGen.io.stage2Redirect
   private val s1_s3_redirect = Mux(s1_robFlushRedirect.valid, s1_robFlushRedirect, s3_redirectGen)
   private val s2_s4_pendingRedirectValid = RegInit(false.B)
@@ -150,7 +151,7 @@ class CtrlBlockImp(
       val killedByOlderThat = wb.bits.robIdx.needFlush(Seq(s1_s3_redirect, s2_s4_redirect, s3_s5_redirect))
       (wb.bits.robIdx === x.bits.robIdx) && wb.valid && x.valid && !killedByOlderThat && !killedByOlder
     }).toSeq)
-    delayed.bits := RegNext(PopCount(sameRobidxBools))
+    delayed.bits := RegEnable(PopCount(sameRobidxBools), x.valid)
     delayed
   }).toSeq
 
@@ -252,7 +253,7 @@ class CtrlBlockImp(
   val flushTarget = Mux(s2_csrIsXRet || s5_csrIsTrap, s2_s5_trapTargetFromCsr, s2_robFlushPc)
   when (s6_flushFromRobValid) {
     io.frontend.toFtq.redirect.bits.level := RedirectLevel.flush
-    io.frontend.toFtq.redirect.bits.cfiUpdate.target := RegNext(flushTarget)
+    io.frontend.toFtq.redirect.bits.cfiUpdate.target := RegEnable(flushTarget, s5_flushFromRobValidAhead)
   }
 
   // vtype commit
@@ -266,7 +267,7 @@ class CtrlBlockImp(
   val walkVTypeReverse = rob.io.commits.info.map(info => info.vtype).reverse
   val walkVType = PriorityMux(isVsetSeq, walkVTypeReverse)
 
-  decode.io.walkVType.bits := RegNext(walkVType.asTypeOf(new VType))
+  decode.io.walkVType.bits := RegEnable(walkVType.asTypeOf(new VType), rob.io.commits.isWalk && isVsetSeq.reduce(_ || _))
   decode.io.walkVType.valid := RegNext(rob.io.commits.isWalk && isVsetSeq.reduce(_ || _))
 
   decode.io.isRedirect := s1_s3_redirect.valid
@@ -472,8 +473,8 @@ class CtrlBlockImp(
   io.toIssueBlock.flush   <> s2_s4_redirect
 
   pcMem.io.wen.head   := RegNext(io.frontend.fromFtq.pc_mem_wen)
-  pcMem.io.waddr.head := RegNext(io.frontend.fromFtq.pc_mem_waddr)
-  pcMem.io.wdata.head := RegNext(io.frontend.fromFtq.pc_mem_wdata)
+  pcMem.io.waddr.head := RegEnable(io.frontend.fromFtq.pc_mem_waddr, io.frontend.fromFtq.pc_mem_wen)
+  pcMem.io.wdata.head := RegEnable(io.frontend.fromFtq.pc_mem_wdata, io.frontend.fromFtq.pc_mem_wen)
 
   private val jumpPcVec         : Vec[UInt] = Wire(Vec(params.numPcReadPort, UInt(VAddrData().dataWidth.W)))
   io.toIssueBlock.pcVec := jumpPcVec

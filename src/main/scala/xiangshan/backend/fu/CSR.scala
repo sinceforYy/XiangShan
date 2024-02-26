@@ -654,7 +654,7 @@ class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
   def fflags_wfn(update: Boolean)(wdata: UInt): UInt = {
     val fcsrOld = fcsr.asTypeOf(new FcsrStruct)
     val fcsrNew = WireInit(fcsrOld)
-    csrw_dirty_fp_state := true.B
+//    csrw_dirty_fp_state := true.B
     if (update) {
       fcsrNew.fflags := wdata(4,0) | fcsrOld.fflags
     } else {
@@ -950,10 +950,10 @@ class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
   MaskedRegMap.generate(fixMapping, addr, rdataFix, wen && permitted, wdataFix)
 
   when (RegNext(csrio.fpu.fflags.valid)) {
-    fcsr := fflags_wfn(update = true)(RegNext(csrio.fpu.fflags.bits))
+    fcsr := fflags_wfn(update = true)(RegEnable(csrio.fpu.fflags.bits, csrio.fpu.fflags.valid))
   }
   when(RegNext(csrio.vpu.set_vxsat.valid)) {
-    vcsr := vxsat_wfn(update = true)(RegNext(csrio.vpu.set_vxsat.bits))
+    vcsr := vxsat_wfn(update = true)(RegEnable(csrio.vpu.set_vxsat.bits, csrio.vpu.set_vxsat.valid))
   }
   // set fs and sd in mstatus
   when (csrw_dirty_fp_state || RegNext(csrio.fpu.dirty_fs)) {
@@ -965,13 +965,13 @@ class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
   csrio.fpu.frm := fcsr.asTypeOf(new FcsrStruct).frm
 
   when (RegNext(csrio.vpu.set_vstart.valid)) {
-    vstart := RegNext(csrio.vpu.set_vstart.bits)
+    vstart := RegEnable(csrio.vpu.set_vstart.bits, csrio.vpu.set_vstart.valid)
   }
   when (RegNext(csrio.vpu.set_vtype.valid)) {
-    vtype := RegNext(csrio.vpu.set_vtype.bits)
+    vtype := RegEnable(csrio.vpu.set_vtype.bits, csrio.vpu.set_vtype.valid)
   }
   when (RegNext(csrio.vpu.set_vl.valid)) {
-    vl := RegNext(csrio.vpu.set_vl.bits)
+    vl := RegEnable(csrio.vpu.set_vl.bits, csrio.vpu.set_vl.valid)
   }
   // set vs and sd in mstatus
   when(csrw_dirty_vs_state || RegNext(csrio.vpu.dirty_vs)) {
