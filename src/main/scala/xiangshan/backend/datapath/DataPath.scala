@@ -148,6 +148,7 @@ class DataPathImp(override val wrapper: DataPath)(implicit p: Parameters, params
 
   private val schdParams = params.allSchdParams
 
+  // private val pcReadFtqValid = Wire(chiselTypeOf(io.pcFromPcTargetMem.fromDataPathFtqValid))
   private val pcReadFtqPtr = Wire(chiselTypeOf(io.pcFromPcTargetMem.fromDataPathFtqPtr))
   private val pcReadFtqOffset = Wire(chiselTypeOf(io.pcFromPcTargetMem.fromDataPathFtqOffset))
   private val pcRdata = io.pcFromPcTargetMem.toDataPathPC
@@ -166,8 +167,10 @@ class DataPathImp(override val wrapper: DataPath)(implicit p: Parameters, params
 
   val pcReadFtqPtrFormIQ = fromIntIQ.flatten.filter(x => x.bits.exuParams.needPc)
   assert(pcReadFtqPtrFormIQ.size == pcReadFtqPtr.size, s"pcReadFtqPtrFormIQ.size ${pcReadFtqPtrFormIQ.size} not equal pcReadFtqPtr.size ${pcReadFtqPtr.size}")
+  // pcReadFtqValid.zip(pcReadFtqPtrFormIQ.map(_.valid)).map(x => x._1 := x._2)
   pcReadFtqPtr.zip(pcReadFtqPtrFormIQ.map(_.bits.common.ftqIdx.get)).map(x => x._1 := x._2)
   pcReadFtqOffset.zip(pcReadFtqPtrFormIQ.map(_.bits.common.ftqOffset.get)).map(x => x._1 := x._2)
+  // io.pcFromPcTargetMem.fromDataPathFtqValid := pcReadFtqValid
   io.pcFromPcTargetMem.fromDataPathFtqPtr := pcReadFtqPtr
   io.pcFromPcTargetMem.fromDataPathFtqOffset := pcReadFtqOffset
   private val intDebugRead: Option[(Vec[UInt], Vec[UInt])] =

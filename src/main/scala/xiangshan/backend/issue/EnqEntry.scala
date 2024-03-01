@@ -28,8 +28,8 @@ class EnqEntryIO(implicit p: Parameters, params: IssueBlockParams) extends XSBun
 class EnqEntry(isComp: Boolean)(implicit p: Parameters, params: IssueBlockParams) extends XSModule {
   val io = IO(new EnqEntryIO)
 
-  val validReg            = RegInit(false.B)
-  val enqDelayValidReg    = RegInit(false.B)
+//  val validReg            = RegInit(false.B)
+//  val enqDelayValidReg    = RegInit(false.B)
   //val entryReg            = Reg(new EntryBundle)
 
   val common              = Wire(new CommonWireBundle)
@@ -51,9 +51,9 @@ class EnqEntry(isComp: Boolean)(implicit p: Parameters, params: IssueBlockParams
   val enqDelayShiftedWakeupLoadDependencyByIQVec: Vec[Vec[UInt]]  = Wire(Vec(params.numWakeupFromIQ, Vec(LoadPipelineWidth, UInt(3.W))))
 
   //Reg
+  val validReg = RegNext(common.validRegNext)
   val entryReg = RegEnable(entryRegNext, validReg || common.validRegNext)
-  validReg                        := common.validRegNext
-  enqDelayValidReg                := enqDelayValidRegNext
+  val enqDelayValidReg = RegNext(enqDelayValidRegNext)
 
   //Wire
   CommonWireConnect(common, hasWakeupIQ, validReg, currentStatus, io.commonIn, true)

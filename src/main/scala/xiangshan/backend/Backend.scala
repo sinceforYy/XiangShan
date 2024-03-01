@@ -286,6 +286,7 @@ class BackendImp(override val wrapper: Backend)(implicit p: Parameters) extends 
   }
 
   pcTargetMem.io.fromFrontendFtq := io.frontend.fromFtq
+//  pcTargetMem.io.fromDataPathFtqValid := bypassNetwork.io.toExus.int.flatten.filter(_.bits.params.hasPredecode).map(_.valid).toSeq
   pcTargetMem.io.fromDataPathFtq := bypassNetwork.io.toExus.int.flatten.filter(_.bits.params.hasPredecode).map(_.bits.ftqIdx.get).toSeq
   intExuBlock.io.in.flatten.filter(_.bits.params.hasPredecode).map(_.bits.predictInfo.get.target).zipWithIndex.foreach {
     case (sink, i) =>
@@ -432,6 +433,7 @@ class BackendImp(override val wrapper: Backend)(implicit p: Parameters) extends 
   require(io.mem.loadPcRead.size == params.LduCnt)
   io.mem.loadPcRead.zipWithIndex.foreach { case (loadPcRead, i) =>
     loadPcRead := ctrlBlock.io.memLdPcRead(i).data
+//    ctrlBlock.io.memLdPcRead(i).valid := io.mem.issueUops(i).valid
     ctrlBlock.io.memLdPcRead(i).ptr := io.mem.issueUops(i).bits.uop.ftqPtr
     ctrlBlock.io.memLdPcRead(i).offset := io.mem.issueUops(i).bits.uop.ftqOffset
     require(toMem.head(i).bits.ftqIdx.isDefined && toMem.head(i).bits.ftqOffset.isDefined)
@@ -439,6 +441,7 @@ class BackendImp(override val wrapper: Backend)(implicit p: Parameters) extends 
 
   io.mem.storePcRead.zipWithIndex.foreach { case (storePcRead, i) =>
     storePcRead := ctrlBlock.io.memStPcRead(i).data
+//    ctrlBlock.io.memStPcRead(i).valid := io.mem.issueUops(i + params.LduCnt).valid
     ctrlBlock.io.memStPcRead(i).ptr := io.mem.issueUops(i + params.LduCnt).bits.uop.ftqPtr
     ctrlBlock.io.memStPcRead(i).offset := io.mem.issueUops(i + params.LduCnt).bits.uop.ftqOffset
     require(toMem(1)(i).bits.ftqIdx.isDefined && toMem(1)(i).bits.ftqOffset.isDefined)

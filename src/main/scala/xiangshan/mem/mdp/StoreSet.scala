@@ -44,6 +44,7 @@ class SSITDataEntry(implicit p: Parameters) extends XSBundle {
 // Store Set Identifier Table
 class SSIT(implicit p: Parameters) extends XSModule {
   val io = IO(new Bundle {
+    // val ren = Vec(DecodeWidth, Input(Bool()))
     // to decode
     val raddr = Vec(DecodeWidth, Input(UInt(MemPredPCWidth.W))) // xor hashed decode pc(VaddrBits-1, 1)
     // to rename
@@ -74,18 +75,21 @@ class SSIT(implicit p: Parameters) extends XSModule {
   val SSIT_UPDATE_STORE_WRITE_PORT = 1
   val SSIT_WRITE_PORT_NUM = 2
 
+  private def hasRen: Boolean = true
   val valid_array = Module(new SyncDataModuleTemplate(
     Bool(),
     SSITSize,
     SSIT_READ_PORT_NUM,
-    SSIT_WRITE_PORT_NUM
+    SSIT_WRITE_PORT_NUM,
+    hasRen = hasRen,
   ))
 
   val data_array = Module(new SyncDataModuleTemplate(
     new SSITDataEntry,
     SSITSize,
     SSIT_READ_PORT_NUM,
-    SSIT_WRITE_PORT_NUM
+    SSIT_WRITE_PORT_NUM,
+    hasRen = hasRen,
   ))
 
   // TODO: use SRAM or not?
@@ -116,6 +120,10 @@ class SSIT(implicit p: Parameters) extends XSModule {
     // io.rdata(i).strict := RegNext(strict(io.raddr(i)) && valid(io.raddr(i)))
 
     // read SSIT in decode stage
+    valid_array.io.ren.get(i) := true.B
+    data_array.io.ren.get(i) := true.B
+    // valid_array.io.ren.get(i) := io.ren(i)
+    // data_array.io.ren.get(i) := io.ren(i)
     valid_array.io.raddr(i) := io.raddr(i)
     data_array.io.raddr(i) := io.raddr(i)
 
@@ -415,6 +423,7 @@ class LFST(implicit p: Parameters) extends XSModule {
 
   // recover robIdx after squash
   // behavior model, to be refactored later
+//  when(GatedValidRegNext(io.redirect.fire)) {
   when(RegNext(io.redirect.fire)) {
     (0 until LFSTSize).map(i => {
       (0 until LFSTWidth).map(j => {

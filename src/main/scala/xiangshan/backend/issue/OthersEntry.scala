@@ -21,7 +21,7 @@ class OthersEntryIO(implicit p: Parameters, params: IssueBlockParams) extends XS
 class OthersEntry(isComp: Boolean)(implicit p: Parameters, params: IssueBlockParams) extends XSModule {
   val io = IO(new OthersEntryIO)
 
-  val validReg        = RegInit(false.B)
+//  val validReg        = RegInit(false.B)
   // val entryReg        = Reg(new EntryBundle)
 
   val common          = Wire(new CommonWireBundle)
@@ -30,8 +30,8 @@ class OthersEntry(isComp: Boolean)(implicit p: Parameters, params: IssueBlockPar
   val hasWakeupIQ     = OptionWrapper(params.hasIQWakeUp, Wire(new CommonIQWakeupBundle))
 
   //Reg
+  val validReg = RegNext(common.validRegNext)
   val entryReg = RegEnable(entryRegNext, validReg || common.validRegNext)
-  validReg := common.validRegNext
   //entryReg := entryRegNext
 
   //Wire

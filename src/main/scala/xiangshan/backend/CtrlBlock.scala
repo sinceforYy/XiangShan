@@ -90,6 +90,8 @@ class CtrlBlockImp(
   val fpDq = Module(new DispatchQueue(dpParams.FpDqSize, RenameWidth, dpParams.FpDqDeqWidth))
   val lsDq = Module(new DispatchQueue(dpParams.LsDqSize, RenameWidth, dpParams.LsDqDeqWidth))
   val redirectGen = Module(new RedirectGenerator)
+//  private def hasRen: Boolean = true
+//  private val pcMem = Module(new SyncDataModuleTemplate(new Ftq_RF_Components, FtqSize, numPcMemRead, 1, "BackendPC", hasRen = hasRen))
   private val pcMem = Module(new SyncDataModuleTemplate(new Ftq_RF_Components, FtqSize, numPcMemRead, 1, "BackendPC"))
   private val rob = wrapper.rob.module
   private val memCtrl = Module(new MemCtrl(params))
@@ -98,11 +100,11 @@ class CtrlBlockImp(
 
   private val s0_robFlushRedirect = rob.io.flushOut
   private val s1_robFlushRedirect = Wire(Valid(new Redirect))
-  s1_robFlushRedirect.valid := RegNext(s0_robFlushRedirect.valid)
+  s1_robFlushRedirect.valid := RegNext(s0_robFlushRedirect.valid, false.B)
   s1_robFlushRedirect.bits := RegEnable(s0_robFlushRedirect.bits, s0_robFlushRedirect.valid)
 
+//  pcMem.io.ren.get(pcMemRdIndexes("robFlush").head) := s0_robFlushRedirect.valid
   pcMem.io.raddr(pcMemRdIndexes("robFlush").head) := s0_robFlushRedirect.bits.ftqIdx.value
-  // private val s1_robFlushPc = pcMem.io.rdata(pcMemRdIndexes("robFlush").head).getPc(RegNext(s0_robFlushRedirect.bits.ftqOffset))
   private val s1_robFlushPc = pcMem.io.rdata(pcMemRdIndexes("robFlush").head).getPc(RegEnable(s0_robFlushRedirect.bits.ftqOffset, s0_robFlushRedirect.valid))
   private val s3_redirectGen = redirectGen.io.stage2Redirect
   private val s1_s3_redirect = Mux(s1_robFlushRedirect.valid, s1_robFlushRedirect, s3_redirectGen)
@@ -179,20 +181,33 @@ class CtrlBlockImp(
 
   val pdestReverse = rob.io.commits.info.map(info => info.pdest).reverse
 
+//  pcMem.io.ren.get(pcMemRdIndexes("redirect").head) := true.B
+//  pcMem.io.ren.get(pcMemRdIndexes("redirect").head) := redirectGen.io.redirectPcRead.valid
   pcMem.io.raddr(pcMemRdIndexes("redirect").head) := redirectGen.io.redirectPcRead.ptr.value
   redirectGen.io.redirectPcRead.data := pcMem.io.rdata(pcMemRdIndexes("redirect").head).getPc(RegNext(redirectGen.io.redirectPcRead.offset))
+//  redirectGen.io.redirectPcRead.data := pcMem.io.rdata(pcMemRdIndexes("redirect").head).getPc(RegEnable(redirectGen.io.redirectPcRead.offset, redirectGen.io.redirectPcRead.valid))
+
+//  pcMem.io.ren.get(pcMemRdIndexes("memPred").head) := true.B
+//  pcMem.io.ren.get(pcMemRdIndexes("memPred").head) := redirectGen.io.memPredPcRead.valid
   pcMem.io.raddr(pcMemRdIndexes("memPred").head) := redirectGen.io.memPredPcRead.ptr.value
   redirectGen.io.memPredPcRead.data := pcMem.io.rdata(pcMemRdIndexes("memPred").head).getPc(RegNext(redirectGen.io.memPredPcRead.offset))
+//  redirectGen.io.memPredPcRead.data := pcMem.io.rdata(pcMemRdIndexes("memPred").head).getPc(RegEnable(redirectGen.io.memPredPcRead.offset, redirectGen.io.memPredPcRead.valid))
 
   for ((pcMemIdx, i) <- pcMemRdIndexes("load").zipWithIndex) {
+    // pcMem.io.ren.get(pcMemIdx) := true.B
+//    pcMem.io.ren.get(pcMemIdx) := io.memLdPcRead(i).valid
     pcMem.io.raddr(pcMemIdx) := io.memLdPcRead(i).ptr.value
     io.memLdPcRead(i).data := pcMem.io.rdata(pcMemIdx).getPc(RegNext(io.memLdPcRead(i).offset))
+//    io.memLdPcRead(i).data := pcMem.io.rdata(pcMemIdx).getPc(RegEnable(io.memLdPcRead(i).offset, io.memLdPcRead(i).valid))
   }
 
   if (EnableStorePrefetchSMS) {
     for ((pcMemIdx, i) <- pcMemRdIndexes("store").zipWithIndex) {
+      // pcMem.io.ren.get(pcMemIdx) := true.B
+//      pcMem.io.ren.get(pcMemIdx) := io.memStPcRead(i).valid
       pcMem.io.raddr(pcMemIdx) := io.memStPcRead(i).ptr.value
       io.memStPcRead(i).data := pcMem.io.rdata(pcMemIdx).getPc(RegNext(io.memStPcRead(i).offset))
+//      io.memStPcRead(i).data := pcMem.io.rdata(pcMemIdx).getPc(RegEnable(io.memStPcRead(i).offset, io.memStPcRead(i).valid))
     }
   } else {
     io.memStPcRead.foreach(_.data := 0.U)
@@ -373,8 +388,10 @@ class CtrlBlockImp(
 
   // memory dependency predict
   // when decode, send fold pc to mdp
+  // private val mdpFlodPcVecValid = Wire(Vec(DecodeWidth, Bool()))
   private val mdpFlodPcVec = Wire(Vec(DecodeWidth, UInt(MemPredPCWidth.W)))
   for (i <- 0 until DecodeWidth) {
+    // mdpFlodPcVecValid(i) := decode.io.out(i).fire || rename.io.in(i).valid
     mdpFlodPcVec(i) := Mux(
       decode.io.out(i).fire,
       decode.io.in(i).bits.foldpc,
@@ -387,6 +404,7 @@ class CtrlBlockImp(
   memCtrl.io.csrCtrl := io.csrCtrl                          // RegNext in memCtrl
   memCtrl.io.stIn := io.fromMem.stIn                        // RegNext in memCtrl
   memCtrl.io.memPredUpdate := redirectGen.io.memPredUpdate  // RegNext in memCtrl
+  // memCtrl.io.mdpFlodPcVecValid := mdpFlodPcVecValid
   memCtrl.io.mdpFlodPcVec := mdpFlodPcVec
   memCtrl.io.dispatchLFSTio <> dispatch.io.lfst
 
@@ -485,12 +503,16 @@ class CtrlBlockImp(
   for ((pcMemIdx, i) <- pcMemRdIndexes("exu").zipWithIndex) {
     val intDq0numDeq = intDq0.dpParams.IntDqDeqWidth/2
     if (i < intDq0numDeq) {
+      // pcMem.io.ren.get(pcMemIdx) := intDq0.io.deq(i).valid
       pcMem.io.raddr(pcMemIdx) := intDq0.io.deqNext(i).ftqPtr.value
       jumpPcVec(i) := pcMem.io.rdata(pcMemIdx).getPc(RegNext(intDq0.io.deqNext(i).ftqOffset))
+      // jumpPcVec(i) := pcMem.io.rdata(pcMemIdx).getPc(RegEnable(intDq0.io.deqNext(i).ftqOffset, intDq0.io.deq(i).valid))
     }
     else {
+      // pcMem.io.ren.get(pcMemIdx) := intDq1.io.deq(i - intDq0numDeq).valid
       pcMem.io.raddr(pcMemIdx) := intDq1.io.deqNext(i - intDq0numDeq).ftqPtr.value
       jumpPcVec(i) := pcMem.io.rdata(pcMemIdx).getPc(RegNext(intDq1.io.deqNext(i - intDq0numDeq).ftqOffset))
+      // jumpPcVec(i) := pcMem.io.rdata(pcMemIdx).getPc(RegEnable(intDq1.io.deqNext(i - intDq0numDeq).ftqOffset, intDq1.io.deq(i - intDq0numDeq).valid))
     }
   }
 

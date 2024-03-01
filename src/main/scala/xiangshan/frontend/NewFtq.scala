@@ -160,7 +160,14 @@ class Ftq_Pred_Info(implicit p: Parameters) extends XSBundle {
 class FtqRead[T <: Data](private val gen: T)(implicit p: Parameters) extends XSBundle {
   val ptr = Output(new FtqPtr)
   val offset = Output(UInt(log2Ceil(PredictWidth).W))
+  // val valid = Output(Bool())
   val data = Input(gen)
+  // def apply(ptr: FtqPtr, offset: UInt, valid: Bool) = {
+  //   this.ptr := ptr
+  //   this.offset := offset
+  //   this.valid := valid
+  //   this.data
+  // }
   def apply(ptr: FtqPtr, offset: UInt) = {
     this.ptr := ptr
     this.offset := offset

@@ -482,7 +482,9 @@ class RobImp(override val wrapper: Rob)(implicit p: Parameters, params: BackendP
     * (1) read: commits/walk/exception
     * (2) write: write back from exe units
     */
+  // private def hasRen: Boolean = true
   val dispatchData = Module(new SyncDataModuleTemplate(new RobDispatchData, RobSize, CommitWidth, RenameWidth))
+  // val dispatchData = Module(new SyncDataModuleTemplate(new RobDispatchData, RobSize, CommitWidth, RenameWidth, hasRen = hasRen))
   val dispatchDataRead = dispatchData.io.rdata
 
   val exceptionGen = Module(new ExceptionGen(params))
@@ -1257,6 +1259,10 @@ class RobImp(override val wrapper: Rob)(implicit p: Parameters, params: BackendP
     wdata.isVset := req.isVset
     wdata.instrSize := req.instrSize
   }
+  // for (i <- 0 until CommitWidth) {
+  //   dispatchData.io.ren.get(i) := true.B
+  //   // dispatchData.io.ren.get(i) := io.commits.isCommit || io.commits.isWalk || exceptionGen.io.out.valid
+  // }
   dispatchData.io.raddr := commitReadAddr_next
 
   exceptionGen.io.redirect <> io.redirect
