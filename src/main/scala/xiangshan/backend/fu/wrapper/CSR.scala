@@ -7,6 +7,7 @@ import xiangshan._
 import xiangshan.backend.fu.NewCSR.{CSRPermitModule, NewCSR, VtypeBundle}
 import xiangshan.backend.fu.util._
 import xiangshan.backend.fu.{FuConfig, FuncUnit}
+import device.IMSIC
 
 class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
 {
@@ -42,6 +43,7 @@ class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
 
   val permitMod = Module(new CSRPermitModule)
   val csrMod = Module(new NewCSR)
+  val imsic = Module(new IMSIC)
 
   private val privState = csrMod.io.out.privState
   // The real reg value in CSR, with no read mask
@@ -109,6 +111,21 @@ class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
   exceptionVec(EX_UCALL ) := isEcall && privState.isModeHUorVU
   exceptionVec(EX_II    ) := csrMod.io.out.EX_II
   exceptionVec(EX_VI    ) := csrMod.io.out.EX_VI // Todo: check other EX_VI
+
+  // IMSIC
+  imsic.i.setIpNumValidVec2 := false.B // Todo:
+  imsic.i.setIpNum := 0.U // Todo:
+  imsic.i.hartId := csrIn.hartId
+  imsic.i.csr.addr <> csrMod.toAIA.addr
+  imsic.i.csr.vgein := csrMod.toAIA.vgein
+  imsic.i.csr.mClaim := csrMod.toAIA.mClaim
+  imsic.i.csr.sClaim := csrMod.toAIA.sClaim
+  imsic.i.csr.vsClaim := csrMod.toAIA.vsClaim
+  imsic.i.csr.wdata <> csrMod.toAIA.wdata
+  csrMod.fromAIA.rdata <> imsic.o.csr.rdata
+  csrMod.fromAIA.mtopei := imsic.o.mtopei
+  csrMod.fromAIA.stopei := imsic.o.stopei
+  csrMod.fromAIA.vstopei := imsic.o.vstopei
 
   val isXRet = valid && func === CSROpType.jmp && !isEcall && !isEbreak
 
