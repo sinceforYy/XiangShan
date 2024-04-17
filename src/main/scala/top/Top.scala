@@ -198,6 +198,28 @@ class XSTop()(implicit p: Parameters) extends BaseXSSoc() with HasSoCParameter
       core.module.io.hartId := i.U
       io.riscv_halt(i) := core.module.io.cpu_halt
       core.module.io.reset_vector := io.riscv_rst_vec(i)
+
+      misc.module.hartId := i.U
+      misc.module.toAIA.addr.valid      := core.module.io.toAIA.addr.valid
+      misc.module.toAIA.addr.bits.addr  := core.module.io.toAIA.addr.bits.addr
+      misc.module.toAIA.addr.bits.prvm  := core.module.io.toAIA.addr.bits.prvm
+      misc.module.toAIA.addr.bits.v     := core.module.io.toAIA.addr.bits.v
+      misc.module.toAIA.vgein           := core.module.io.toAIA.vgein
+      misc.module.toAIA.mClaim          := core.module.io.toAIA.mClaim
+      misc.module.toAIA.sClaim          := core.module.io.toAIA.sClaim
+      misc.module.toAIA.vsClaim         := core.module.io.toAIA.vsClaim
+      misc.module.toAIA.wdata.valid     := core.module.io.toAIA.wdata.valid
+      misc.module.toAIA.wdata.bits.data := core.module.io.toAIA.wdata.bits.data
+
+      core.module.io.fromAIA.rdata.valid        := misc.module.fromAIA.rdata.valid
+      core.module.io.fromAIA.rdata.bits.data    := misc.module.fromAIA.rdata.bits.data
+      core.module.io.fromAIA.rdata.bits.illegal := misc.module.fromAIA.rdata.bits.illegal
+      core.module.io.fromAIA.mtopei.valid       := misc.module.fromAIA.mtopei.valid
+      core.module.io.fromAIA.stopei.valid       := misc.module.fromAIA.stopei.valid
+      core.module.io.fromAIA.vstopei.valid      := misc.module.fromAIA.vstopei.valid
+      core.module.io.fromAIA.mtopei.bits        := misc.module.fromAIA.mtopei.bits
+      core.module.io.fromAIA.stopei.bits        := misc.module.fromAIA.stopei.bits
+      core.module.io.fromAIA.vstopei.bits       := misc.module.fromAIA.vstopei.bits
     }
 
     if(l3cacheOpt.isEmpty || l3cacheOpt.get.rst_nodes.isEmpty){

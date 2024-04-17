@@ -19,7 +19,7 @@ package system
 import org.chipsalliance.cde.config.{Field, Parameters}
 import chisel3._
 import chisel3.util._
-import device.{DebugModule, TLPMA, TLPMAIO}
+import device.{DebugModule, TLPMA, TLPMAIO, IMSIC}
 import freechips.rocketchip.amba.axi4._
 import freechips.rocketchip.devices.tilelink._
 import freechips.rocketchip.diplomacy.{AddressSet, IdRange, InModuleBody, LazyModule, LazyModuleImp, MemoryDevice, RegionType, SimpleDevice, TransferSizes}
@@ -31,6 +31,7 @@ import top.BusPerfMonitor
 import utility.{ReqSourceKey, TLClientsMerger, TLEdgeBuffer, TLLogger}
 import xiangshan.backend.fu.PMAConst
 import xiangshan.{DebugOptionsKey, XSTileKey}
+import xiangshan.backend.fu.NewCSR.{AIAToCSRBundle, CSRToAIABundle}
 
 case object SoCParamsKey extends Field[SoCParameters]
 
@@ -301,6 +302,9 @@ class SoCMisc()(implicit p: Parameters) extends BaseSoC
     val pll0_lock = IO(Input(Bool()))
     val pll0_ctrl = IO(Output(Vec(6, UInt(32.W))))
     val cacheable_check = IO(new TLPMAIO)
+    val hartId = IO(Input(UInt(64.W)))
+    val fromAIA = IO(Output(new AIAToCSRBundle))
+    val toAIA = IO(Flipped(Output(new CSRToAIABundle)))
 
     debugModule.module.io <> debug_module_io
 
@@ -344,6 +348,31 @@ class SoCMisc()(implicit p: Parameters) extends BaseSoC
         ))
       )
     )
+
+    val imsic = Module(new IMSIC)
+    imsic.i.hartId := hartId
+    imsic.i.setIpNum := DontCare
+    imsic.i.setIpNumValidVec2 := DontCare
+    imsic.i.csr.addr.valid := toAIA.addr.valid
+    imsic.i.csr.addr.bits.addr := toAIA.addr.bits.addr
+    imsic.i.csr.addr.bits.prvm := toAIA.addr.bits.prvm.asUInt
+    imsic.i.csr.addr.bits.v := toAIA.addr.bits.v.asUInt
+    imsic.i.csr.vgein := toAIA.vgein
+    imsic.i.csr.mClaim := toAIA.mClaim
+    imsic.i.csr.sClaim := toAIA.sClaim
+    imsic.i.csr.vsClaim := toAIA.vsClaim
+    imsic.i.csr.wdata.valid := toAIA.wdata.valid
+    imsic.i.csr.wdata.bits.data := toAIA.wdata.bits.data
+
+    fromAIA.rdata.valid := imsic.o.csr.rdata.valid
+    fromAIA.rdata.bits.data := imsic.o.csr.rdata.bits.rdata
+    fromAIA.rdata.bits.illegal := imsic.o.csr.rdata.bits.illegal
+    fromAIA.mtopei.valid := imsic.o.mtopei.valid
+    fromAIA.stopei.valid := imsic.o.stopei.valid
+    fromAIA.vstopei.valid := imsic.o.vstopei.valid
+    fromAIA.mtopei.bits := imsic.o.mtopei.bits
+    fromAIA.stopei.bits := imsic.o.stopei.bits
+    fromAIA.vstopei.bits := imsic.o.vstopei.bits
   }
 
   lazy val module = new SoCMiscImp(this)

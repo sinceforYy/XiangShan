@@ -29,6 +29,7 @@ import xiangshan.backend._
 import xiangshan.cache.mmu._
 import xiangshan.frontend._
 import xiangshan.mem.L1PrefetchFuzzer
+import xiangshan.backend.fu.NewCSR.{AIAToCSRBundle, CSRToAIABundle}
 
 abstract class XSModule(implicit val p: Parameters) extends Module
   with HasXSParameter
@@ -86,6 +87,8 @@ class XSCoreImp(outer: XSCoreBase) extends LazyModuleImp(outer)
       val l2MissMatch = Input(Bool())
       val l3MissMatch = Input(Bool())
     }
+    val fromAIA = Flipped(Output(new AIAToCSRBundle))
+    val toAIA = Output(new CSRToAIABundle)
   })
 
   println(s"FPGAPlatform:${env.FPGAPlatform} EnableDebug:${env.EnableDebug}")
@@ -242,4 +245,26 @@ class XSCoreImp(outer: XSCoreBase) extends LazyModuleImp(outer)
     frontend.reset := memBlock.reset_io_frontend
     backend.reset := memBlock.reset_io_backend
   }
+
+  // IMSIC
+  backend.io.fromAIA.rdata.valid        := io.fromAIA.rdata.valid
+  backend.io.fromAIA.rdata.bits.data    := io.fromAIA.rdata.bits.data
+  backend.io.fromAIA.rdata.bits.illegal := io.fromAIA.rdata.bits.illegal
+  backend.io.fromAIA.mtopei.valid       := io.fromAIA.mtopei.valid
+  backend.io.fromAIA.stopei.valid       := io.fromAIA.stopei.valid
+  backend.io.fromAIA.vstopei.valid      := io.fromAIA.vstopei.valid
+  backend.io.fromAIA.mtopei.bits        := io.fromAIA.mtopei.bits
+  backend.io.fromAIA.stopei.bits        := io.fromAIA.stopei.bits
+  backend.io.fromAIA.vstopei.bits       := io.fromAIA.vstopei.bits
+
+  io.toAIA.addr.valid      := backend.io.toAIA.addr.valid
+  io.toAIA.addr.bits.addr  := backend.io.toAIA.addr.bits.addr
+  io.toAIA.addr.bits.v     := backend.io.toAIA.addr.bits.v
+  io.toAIA.addr.bits.prvm  := backend.io.toAIA.addr.bits.prvm
+  io.toAIA.vgein           := backend.io.toAIA.vgein
+  io.toAIA.wdata.valid     := backend.io.toAIA.wdata.valid
+  io.toAIA.wdata.bits.data := backend.io.toAIA.wdata.bits.data
+  io.toAIA.mClaim          := backend.io.toAIA.mClaim
+  io.toAIA.sClaim          := backend.io.toAIA.sClaim
+  io.toAIA.vsClaim         := backend.io.toAIA.vsClaim
 }

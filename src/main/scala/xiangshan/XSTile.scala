@@ -27,6 +27,7 @@ import coupledL2.{L2ParamKey, CoupledL2}
 import system.HasSoCParameter
 import top.BusPerfMonitor
 import utility.{DelayN, ResetGen, TLClientsMerger, TLEdgeBuffer, TLLogger}
+import xiangshan.backend.fu.NewCSR.{AIAToCSRBundle, CSRToAIABundle}
 
 class XSTile()(implicit p: Parameters) extends LazyModule
   with HasXSParameter
@@ -97,6 +98,8 @@ class XSTile()(implicit p: Parameters) extends LazyModule
         val robHeadPaddr = Valid(UInt(PAddrBits.W))
         val l3MissMatch = Input(Bool())
       }
+      val fromAIA = Flipped(Output(new AIAToCSRBundle))
+      val toAIA = Output(new CSRToAIABundle)
     })
 
     dontTouch(io.hartId)
@@ -149,6 +152,28 @@ class XSTile()(implicit p: Parameters) extends LazyModule
     //   Seq(l2top.module, core.module)
     // )
     // ResetGen(resetChain, reset, !debugOpts.FPGAPlatform)
+
+    // IMSIC
+    core.module.io.fromAIA.rdata.valid        := io.fromAIA.rdata.valid
+    core.module.io.fromAIA.rdata.bits.data    := io.fromAIA.rdata.bits.data
+    core.module.io.fromAIA.rdata.bits.illegal := io.fromAIA.rdata.bits.illegal
+    core.module.io.fromAIA.mtopei.valid       := io.fromAIA.mtopei.valid
+    core.module.io.fromAIA.stopei.valid       := io.fromAIA.stopei.valid
+    core.module.io.fromAIA.vstopei.valid      := io.fromAIA.vstopei.valid
+    core.module.io.fromAIA.mtopei.bits        := io.fromAIA.mtopei.bits
+    core.module.io.fromAIA.stopei.bits        := io.fromAIA.stopei.bits
+    core.module.io.fromAIA.vstopei.bits       := io.fromAIA.vstopei.bits
+    
+    io.toAIA.addr.valid      := core.module.io.toAIA.addr.valid
+    io.toAIA.addr.bits.addr  := core.module.io.toAIA.addr.bits.addr
+    io.toAIA.addr.bits.prvm  := core.module.io.toAIA.addr.bits.prvm
+    io.toAIA.addr.bits.v     := core.module.io.toAIA.addr.bits.v
+    io.toAIA.vgein           := core.module.io.toAIA.vgein
+    io.toAIA.mClaim          := core.module.io.toAIA.mClaim
+    io.toAIA.sClaim          := core.module.io.toAIA.sClaim
+    io.toAIA.vsClaim         := core.module.io.toAIA.vsClaim
+    io.toAIA.wdata.valid     := core.module.io.toAIA.wdata.valid
+    io.toAIA.wdata.bits.data := core.module.io.toAIA.wdata.bits.data
   }
 
   lazy val module = new XSTileImp(this)

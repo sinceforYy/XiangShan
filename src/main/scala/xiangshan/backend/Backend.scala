@@ -14,6 +14,8 @@ import xiangshan.backend.datapath.WbConfig._
 import xiangshan.backend.datapath._
 import xiangshan.backend.dispatch.CoreDispatchTopDownIO
 import xiangshan.backend.exu.ExuBlock
+import xiangshan.backend.fu.NewCSR.{AIAToCSRBundle, CSRToAIABundle}
+import xiangshan.backend.fu.NewCSR.NewCSR
 import xiangshan.backend.fu.vector.Bundles.{VConfig, VType}
 import xiangshan.backend.fu.{FenceIO, FenceToSbuffer, FuConfig, FuType, PerfCounterIO}
 import xiangshan.backend.issue.EntryBundles._
@@ -520,6 +522,66 @@ class BackendImp(override val wrapper: Backend)(implicit p: Parameters) extends 
     dontTouch(dataPath.io.toMemExu)
     dontTouch(wbDataPath.io.fromMemExu)
   }
+
+  // new-csr
+  val csrMod = Module(new NewCSR)
+  csrMod.io.in.wen := DontCare
+  csrMod.io.in.ren := DontCare
+  csrMod.io.in.addr := DontCare
+  csrMod.io.in.wdata := DontCare
+  csrMod.io.fromMem.excpVaddr := DontCare
+  csrMod.io.fromMem.excpGVA := DontCare
+  csrMod.io.fromMem.excpGPA := DontCare
+  csrMod.io.fromRob.trap.valid := DontCare
+  csrMod.io.fromRob.trap.bits.pc := DontCare
+  csrMod.io.fromRob.trap.bits.instr := DontCare
+  csrMod.io.fromRob.trap.bits.trapVec := DontCare
+  csrMod.io.fromRob.trap.bits.singleStep := DontCare
+  csrMod.io.fromRob.trap.bits.crossPageIPFFix := DontCare
+  csrMod.io.fromRob.trap.bits.isInterrupt := DontCare
+  csrMod.io.fromRob.commit.fflags.valid := DontCare
+  csrMod.io.fromRob.commit.fflags.bits := DontCare
+  csrMod.io.fromRob.commit.fsDirty := DontCare
+  csrMod.io.fromRob.commit.vxsat.valid := DontCare
+  csrMod.io.fromRob.commit.vxsat.bits := DontCare
+  csrMod.io.fromRob.commit.vsDirty := DontCare
+  csrMod.io.fromRob.commit.commitValid := DontCare
+  csrMod.io.fromRob.commit.commitInstRet := DontCare
+  csrMod.io.mret := DontCare
+  csrMod.io.sret := DontCare
+  csrMod.io.dret := DontCare
+  csrMod.io.wfi := DontCare
+  csrMod.io.out.EX_II := DontCare
+  csrMod.io.out.EX_VI := DontCare
+  csrMod.io.out.flushPipe := DontCare
+  csrMod.io.out.rData := DontCare
+  csrMod.io.out.targetPc := DontCare
+  csrMod.io.out.regOut := DontCare
+  csrMod.io.out.privState := DontCare
+  csrMod.io.out.frm := DontCare
+  csrMod.io.out.vstart := DontCare
+  csrMod.io.out.vxrm := DontCare
+
+  csrMod.fromAIA.rdata.valid        := io.fromAIA.rdata.valid
+  csrMod.fromAIA.rdata.bits.data    := io.fromAIA.rdata.bits.data
+  csrMod.fromAIA.rdata.bits.illegal := io.fromAIA.rdata.bits.illegal
+  csrMod.fromAIA.mtopei.valid       := io.fromAIA.mtopei.valid
+  csrMod.fromAIA.stopei.valid       := io.fromAIA.stopei.valid
+  csrMod.fromAIA.vstopei.valid      := io.fromAIA.vstopei.valid
+  csrMod.fromAIA.mtopei.bits        := io.fromAIA.mtopei.bits
+  csrMod.fromAIA.stopei.bits        := io.fromAIA.stopei.bits
+  csrMod.fromAIA.vstopei.bits       := io.fromAIA.vstopei.bits
+
+  io.toAIA.addr.valid      := csrMod.toAIA.addr.valid
+  io.toAIA.addr.bits.addr  := csrMod.toAIA.addr.bits.addr
+  io.toAIA.addr.bits.v     := csrMod.toAIA.addr.bits.v
+  io.toAIA.addr.bits.prvm  := csrMod.toAIA.addr.bits.prvm
+  io.toAIA.vgein           := csrMod.toAIA.vgein
+  io.toAIA.wdata.valid     := csrMod.toAIA.wdata.valid
+  io.toAIA.wdata.bits.data := csrMod.toAIA.wdata.bits.data
+  io.toAIA.mClaim          := csrMod.toAIA.mClaim
+  io.toAIA.sClaim          := csrMod.toAIA.sClaim
+  io.toAIA.vsClaim         := csrMod.toAIA.vsClaim
 }
 
 class BackendMemIO(implicit p: Parameters, params: BackendParams) extends XSBundle {
@@ -638,4 +700,7 @@ class BackendIO(implicit p: Parameters, params: BackendParams) extends XSBundle 
     val fromCore = new CoreDispatchTopDownIO
   }
   val debugRolling = new RobDebugRollingIO
+
+  val fromAIA = Flipped(Output(new AIAToCSRBundle))
+  val toAIA = Output(new CSRToAIABundle)
 }

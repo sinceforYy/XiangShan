@@ -117,75 +117,75 @@ class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
   io.out.bits.res.data := csrMod.io.out.rData
   connect0LatencyCtrlSingal
 
-  csrOut.isPerfCnt
+  csrOut.isPerfCnt := DontCare
   csrOut.fpu.frm := csrMod.io.out.frm
-  csrOut.vpu.vstart
-  csrOut.vpu.vxsat
+  csrOut.vpu.vstart := DontCare
+  csrOut.vpu.vxsat := DontCare
   csrOut.vpu.vxrm := csrMod.io.out.vxrm
-  csrOut.vpu.vcsr
-  csrOut.vpu.vl
-  csrOut.vpu.vtype
-  csrOut.vpu.vlenb
-  csrOut.vpu.vill
-  csrOut.vpu.vma
-  csrOut.vpu.vta
-  csrOut.vpu.vsew
-  csrOut.vpu.vlmul
+  csrOut.vpu.vcsr := DontCare
+  csrOut.vpu.vl := DontCare
+  csrOut.vpu.vtype := DontCare
+  csrOut.vpu.vlenb := DontCare
+  csrOut.vpu.vill := DontCare
+  csrOut.vpu.vma := DontCare
+  csrOut.vpu.vta := DontCare
+  csrOut.vpu.vsew := DontCare
+  csrOut.vpu.vlmul := DontCare
 
-  csrOut.isXRet
+  csrOut.isXRet := DontCare
 
   csrOut.trapTarget := csrMod.io.out.targetPc
-  csrOut.interrupt
-  csrOut.wfi_event
+  csrOut.interrupt := DontCare
+  csrOut.wfi_event := DontCare
 
-  csrOut.tlb
+  csrOut.tlb := DontCare
 
-  csrOut.debugMode
+  csrOut.debugMode := DontCare
 
-  csrOut.disableSfence
+  csrOut.disableSfence := DontCare
 
   csrOut.customCtrl match {
     case custom =>
-      custom.l1I_pf_enable
-      custom.l2_pf_enable
-      custom.l1D_pf_enable
-      custom.l1D_pf_train_on_hit
-      custom.l1D_pf_enable_agt
-      custom.l1D_pf_enable_pht
-      custom.l1D_pf_active_threshold
-      custom.l1D_pf_active_stride
-      custom.l1D_pf_enable_stride
-      custom.l2_pf_store_only
+      custom.l1I_pf_enable := DontCare
+      custom.l2_pf_enable := DontCare
+      custom.l1D_pf_enable := DontCare
+      custom.l1D_pf_train_on_hit := DontCare
+      custom.l1D_pf_enable_agt := DontCare
+      custom.l1D_pf_enable_pht := DontCare
+      custom.l1D_pf_active_threshold := DontCare
+      custom.l1D_pf_active_stride := DontCare
+      custom.l1D_pf_enable_stride := DontCare
+      custom.l2_pf_store_only := DontCare
       // ICache
-      custom.icache_parity_enable
+      custom.icache_parity_enable := DontCare
       // Labeled XiangShan
-      custom.dsid
+      custom.dsid := DontCare
       // Load violation predictor
-      custom.lvpred_disable
-      custom.no_spec_load
-      custom.storeset_wait_store
-      custom.storeset_no_fast_wakeup
-      custom.lvpred_timeout
+      custom.lvpred_disable := DontCare
+      custom.no_spec_load := DontCare
+      custom.storeset_wait_store := DontCare
+      custom.storeset_no_fast_wakeup := DontCare
+      custom.lvpred_timeout := DontCare
       // Branch predictor
-      custom.bp_ctrl
+      custom.bp_ctrl := DontCare
       // Memory Block
-      custom.sbuffer_threshold
-      custom.ldld_vio_check_enable
-      custom.soft_prefetch_enable
-      custom.cache_error_enable
-      custom.uncache_write_outstanding_enable
+      custom.sbuffer_threshold := DontCare
+      custom.ldld_vio_check_enable := DontCare
+      custom.soft_prefetch_enable := DontCare
+      custom.cache_error_enable := DontCare
+      custom.uncache_write_outstanding_enable := DontCare
       // Rename
-      custom.fusion_enable
-      custom.wfi_enable
+      custom.fusion_enable := DontCare
+      custom.wfi_enable := DontCare
       // Decode
-      custom.svinval_enable
+      custom.svinval_enable := DontCare
       // distribute csr write signal
       // write to frontend and memory
-      custom.distribute_csr
+      custom.distribute_csr := DontCare
       // rename single step
-      custom.singlestep
+      custom.singlestep := DontCare
       // trigger
-      custom.frontend_trigger
-      custom.mem_trigger
+      custom.frontend_trigger := DontCare
+      custom.mem_trigger := DontCare
   }
 }
