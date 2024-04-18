@@ -110,9 +110,9 @@ trait Unprivileged { self: NewCSR with MachineLevel with SupervisorLevel =>
 }
 
 class VtypeBundle extends CSRBundle {
-  val VLMUL = RO(2, 0)
-  val VSEW  = RO(5, 3)
-  val VTA   = RO(   6)
-  val VMA   = RO(   7)
   val VILL  = RO(  63)
+  val VMA   = RO(   7)
+  val VTA   = RO(   6)
+  val VSEW  = RO(5, 3)
+  val VLMUL = RO(2, 0)
 }

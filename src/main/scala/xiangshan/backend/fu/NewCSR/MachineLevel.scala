@@ -391,6 +391,7 @@ trait HasExternalInterruptBundle {
     val VSEIP = Input(Bool())
     val VSTIP = Input(Bool())
   })
+  val debugIRP = IO(Input(Bool()))
 }
 
 trait HasMachineCounterControlBundle { self: CSRModule[_] =>

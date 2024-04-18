@@ -19,8 +19,6 @@ class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
   val setVsDirty = csrIn.vpu.dirty_vs
   val setVxsat = csrIn.vpu.vxsat
 
-  val flushPipe = Wire(Bool())
-
   val (valid, src1, src2, func) = (
     io.in.valid,
     io.in.bits.data.src(0),
@@ -101,6 +99,7 @@ class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
   csrMod.platformIRP.SEIP := csrIn.externalInterrupt.seip
   csrMod.platformIRP.VSEIP := false.B // Todo
   csrMod.platformIRP.VSTIP := false.B // Todo
+  csrMod.debugIRP := csrIn.externalInterrupt.debug
 
   private val exceptionVec = WireInit(VecInit(Seq.fill(XLEN)(false.B)))
   import ExceptionNO._
@@ -151,15 +150,15 @@ class CSR(cfg: FuConfig)(implicit p: Parameters) extends FuncUnit(cfg)
   csrOut.vpu.vsew   := csrMod.io.out.vtype.asTypeOf(new VtypeBundle).VSEW
   csrOut.vpu.vlmul  := csrMod.io.out.vtype.asTypeOf(new VtypeBundle).VLMUL
 
-  csrOut.isXRet := isXRet
+  csrOut.isXRet
 
   csrOut.trapTarget := csrMod.io.out.targetPc
-  csrOut.interrupt
-  csrOut.wfi_event
+  csrOut.interrupt  := csrMod.io.out.interrupt
+  csrOut.wfi_event  := csrMod.io.out.wfi_event
 
   csrOut.tlb
 
-  csrOut.debugMode
+  csrOut.debugMode := csrMod.io.out.debugMode
 
   csrOut.disableSfence
 

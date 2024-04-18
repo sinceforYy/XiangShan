@@ -3,9 +3,10 @@ package xiangshan.backend.fu.NewCSR
 import chisel3._
 import chisel3.util._
 import top.{ArgParser, Generator}
+import xiangshan.TlbCsrBundle
 import xiangshan.backend.fu.NewCSR.CSRBundles.PrivState
 import xiangshan.backend.fu.NewCSR.CSRDefines.{PrivMode, VirtMode}
-import xiangshan.backend.fu.NewCSR.CSREvents.{CSREvents, EventUpdatePrivStateOutput, MretEventSinkBundle, SretEventSinkBundle, TrapEntryEventInput, TrapEntryHSEventSinkBundle, TrapEntryMEventSinkBundle, TrapEntryVSEventSinkBundle}
+import xiangshan.backend.fu.NewCSR.CSREvents.{CSREvents, EventUpdatePrivStateOutput, MretEventSinkBundle, SretEventSinkBundle, DretEventSinkBundle, TrapEntryEventInput, TrapEntryHSEventSinkBundle, TrapEntryMEventSinkBundle, TrapEntryVSEventSinkBundle}
 import xiangshan.backend.fu.fpu.Bundles.{Fflags, Frm}
 import xiangshan.backend.fu.vector.Bundles.{Vxrm, Vxsat}
 
@@ -40,6 +41,7 @@ class NewCSR extends Module
   with HasExternalInterruptBundle
   with SupervisorMachineAliasConnect
   with CSREvents
+  with CSRDebugTrigger
 {
 
   import CSRConfig._
@@ -87,6 +89,8 @@ class NewCSR extends Module
       val targetPc = UInt(VaddrWidth.W)
       val regOut = Output(UInt(64.W))
       val privState = Output(new PrivState)
+      val interrupt = Bool()
+      val wfi_event = Bool()
       // fp
       val frm = Frm()
       // vec
@@ -99,6 +103,8 @@ class NewCSR extends Module
       val vlenb = UInt(XLEN.W) // UInt(VDataBytes.U(XLEN.W))
       // perf
       val isPerfCnt = Bool()
+      // debug
+      val debugMode = Bool()
     })
   })
 
@@ -127,6 +133,7 @@ class NewCSR extends Module
   val isCSRAccess = io.in.ren || io.in.wen
   val isSret = io.sret
   val isMret = io.mret
+  val isDret = io.dret
 
   var csrRwMap = machineLevelCSRMap ++ supervisorLevelCSRMap ++ hypervisorCSRMap ++ virtualSupervisorCSRMap ++ unprivilegedCSRMap ++ aiaCSRMap
 
@@ -224,6 +231,20 @@ class NewCSR extends Module
         m.retFromS := sretEvent.out
       case _ =>
     }
+    mod match {
+      case m: DretEventSinkBundle =>
+        m.retFromD := dretEvent.out
+      case _ =>
+    }
+    mod match {
+      case m: AIAToCSRBundle =>
+        m.rdata.bits.rdata := fromAIA.rdata.bits.rdata
+        m.rdata.bits.illegal := fromAIA.rdata.bits.illegal
+        m.mtopei.bits := fromAIA.mtopei.bits
+        m.stopei.bits := fromAIA.stopei.bits
+        m.vstopei.bits := fromAIA.vstopei.bits
+      case _ =>
+    }
   }
 
   csrMods.foreach { mod =>
@@ -288,6 +309,14 @@ class NewCSR extends Module
       in.vsepc := vsepc.regOut
   }
 
+  dretEvent.valid := isDret
+  dretEvent.in match {
+    case in =>
+      in.dcsr := dcsr.regOut
+      in.dpc := dpc.regOut
+      in.mstatus := mstatus.regOut
+  }
+
   PRVM := MuxCase(
     PRVM,
     events.filter(_.out.isInstanceOf[EventUpdatePrivStateOutput]).map {
@@ -319,6 +348,7 @@ class NewCSR extends Module
   io.out.targetPc := Mux1H(Seq(
     mretEvent.out.targetPc.valid -> mretEvent.out.targetPc.bits,
     sretEvent.out.targetPc.valid -> sretEvent.out.targetPc.bits,
+    dretEvent.out.targetPc.valid -> dretEvent.out.targetPc.bits,
     trapEntryMEvent.out.targetPc.valid -> trapEntryMEvent.out.targetPc.bits,
     trapEntryHSEvent.out.targetPc.valid -> trapEntryHSEvent.out.targetPc.bits,
     trapEntryVSEvent.out.targetPc.valid -> trapEntryVSEvent.out.targetPc.bits,
@@ -327,19 +357,51 @@ class NewCSR extends Module
   io.out.privState.PRVM := PRVM
   io.out.privState.V    := V
 
+  // perf
   val addrInPerfCnt = (addr >= mcycle.addr.U) && (addr <= mhpmcounters.last.addr.U) ||
     (addr >= mcountinhibit.addr.U) && (addr <= mhpmevents.last.addr.U) ||
     // (addr >= cycle.addr.U) && (addr <= hpmcounters.last.addr.U) || // User
     addr === mip.addr.U
 
+  // flush
   val resetSatp = addr === satp.addr.U && wen // write to satp will cause the pipeline be flushed
   val wFcsrChangeRM = addr === fcsr.addr.U && wen && wdata(7, 5) =/= fcsr.frm
   val wFrmChangeRM = addr === 0x002.U && wen && wdata(2, 0) =/= fcsr.frm
   val frmChange = wFcsrChangeRM || wFrmChangeRM
+  val flushPipe = resetSatp || frmChange
+
+  // debug
+  val debugMode = RegInit(false.B)
+  val debugIntrEnable = RegInit(true.B) // debug interrupt will be handle only when debugIntrEnable
+  debugMode := dretEvent.out.debugMode
+  debugIntrEnable := dretEvent.out.debugIntrEnable
+
+  // interrupt
+  val ideleg = mideleg.rdata.asUInt & mip.rdata.asUInt
+  def priviledgeEnableDetect(x: Bool): Bool = Mux(x, ((PRVM === PrivMode.S) && mstatus.rdata.SIE.asBool) || (PRVM < PrivMode.S),
+    ((PRVM === PrivMode.M) && mstatus.rdata.MIE.asBool) || (PRVM < PrivMode.M)
+  )
+
+  val debugIntr = debugIRP & debugIntrEnable
+  val intrVecEnable = Wire(Vec(12, Bool()))
+  val disableInterrupt = debugMode || (dcsr.rdata.STEP.asBool && !dcsr.rdata.STEPIE.asBool)
+  intrVecEnable.zip(ideleg.asBools).map{ case (x, y) => x := priviledgeEnableDetect(y) && !disableInterrupt }
+  val intrVec = Cat(debugIntr && !debugMode, mie.rdata.asUInt(11, 0) & mip.rdata.asUInt & intrVecEnable.asUInt)
+  val intrBitSet = intrVec.orR
+
+  val wfi_event = (mie.rdata.asUInt(11, 0) & mip.rdata.asUInt).orR
+
+  // tlb
+//  val tlbBundle = Wire(new TlbBundle)
+//  tlbBundle.satp.apply(satp.rdata.asUInt)
+//  tlbBundle.priv.mxr   := mstatus.mstatus.MXR.asBool
+//  tlbBundle.priv.sum   := mstatus.mstatus.SUM.asBool
+//  tlbBundle.priv.imode := PRVM
+//  tlbBundle.priv.dmode := PRVM // Todo: debug
 
   io.out.EX_VI := false.B
   io.out.EX_II := false.B
-  io.out.flushPipe := resetSatp || frmChange
+  io.out.flushPipe := flushPipe
   io.out.frm := fcsr.frm
   io.out.vstart := vstart.rdata.asUInt
   io.out.vxsat := vcsr.vxsat
@@ -349,6 +411,9 @@ class NewCSR extends Module
   io.out.vtype := vtype.rdata.asUInt
   io.out.vlenb := vlenb.rdata.asUInt
   io.out.isPerfCnt := addrInPerfCnt
+  io.out.interrupt := intrBitSet
+  io.out.wfi_event := wfi_event
+  io.out.debugMode := debugMode
 
   // Todo: record the last address to avoid xireg is different with xiselect
   toAIA.addr.valid := isCSRAccess && Seq(miselect, siselect, vsiselect).map(
