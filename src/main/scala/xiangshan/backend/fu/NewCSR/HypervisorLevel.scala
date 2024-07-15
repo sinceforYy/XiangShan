@@ -47,7 +47,7 @@ trait HypervisorLevel { self: NewCSR =>
     .setAddr(CSRs.hie)
 
   val htimedelta = Module(new CSRModule("Htimedelta", new CSRBundle {
-    val VALUE = RW(63, 0)
+    val VALUE = RW(63, 0).withReset(0.U)
   }))
     .setAddr(CSRs.htimedelta)
 
@@ -70,9 +70,7 @@ trait HypervisorLevel { self: NewCSR =>
   })
     .setAddr(CSRs.henvcfg)
 
-  val htval = Module(new CSRModule("Htval", new CSRBundle {
-    val ALL = RW(63, 0)
-  }) with TrapEntryHSEventSinkBundle)
+  val htval = Module(new CSRModule("Htval", new XtvalBundle) with TrapEntryHSEventSinkBundle)
     .setAddr(CSRs.htval)
 
   val hip = Module(new CSRModule("Hip", new HipBundle)
@@ -126,9 +124,7 @@ trait HypervisorLevel { self: NewCSR =>
   val hviprio2 = Module(new CSRModule("Hviprio2", new Hviprio2Bundle))
     .setAddr(CSRs.hviprio2)
 
-  val htinst = Module(new CSRModule("Htinst", new CSRBundle {
-    val ALL = RW(63, 0)
-  }) with TrapEntryHSEventSinkBundle)
+  val htinst = Module(new CSRModule("Htinst", new XtinstBundle) with TrapEntryHSEventSinkBundle)
     .setAddr(CSRs.htinst)
 
   val hgatp = Module(new CSRModule("Hgatp", new HgatpBundle) {
@@ -199,14 +195,14 @@ trait HypervisorLevel { self: NewCSR =>
 class HstatusBundle extends CSRBundle {
 
   val VSBE  = RO(5).withReset(0.U)
-  val GVA   = RW(6)
-  val SPV   = VirtMode(7)
-  val SPVP  = RW(8)
-  val HU    = RW(9)
-  val VGEIN = HstatusVgeinField(17, 12, wNoFilter, rNoFilter)
-  val VTVM  = RW(20)
-  val VTW   = RW(21)
-  val VTSR  = RW(22)
+  val GVA   = RW(6).withReset(0.U)
+  val SPV   = VirtMode(7).withReset(0.U)
+  val SPVP  = RW(8).withReset(0.U)
+  val HU    = RW(9).withReset(0.U)
+  val VGEIN = HstatusVgeinField(17, 12, wNoFilter, rNoFilter).withReset(0.U)
+  val VTVM  = RW(20).withReset(0.U)
+  val VTW   = RW(21).withReset(0.U)
+  val VTSR  = RW(22).withReset(0.U)
   val VSXL  = XLENField(33, 32).withReset(XLENField.XLEN64)
 
 }
@@ -246,12 +242,12 @@ class HvienBundle extends InterruptEnableBundle {
 }
 
 class HgeieBundle extends CSRBundle {
-  val ie = RW(GEILEN, 1)
+  val ie = RW(GEILEN, 1).withReset(0.U)
   // bit 0 is read only 0
 }
 
 class HgeipBundle extends CSRBundle {
-  val ip = RO(GEILEN, 1)
+  val ip = RO(GEILEN, 1).withReset(0.U)
   // bit 0 is read only 0
 }
 
@@ -333,8 +329,8 @@ class HgatpBundle extends CSRBundle {
   val MODE = HgatpMode(63, 60, wNoFilter).withReset(HgatpMode.Bare)
   // WARL in privileged spec.
   // RW, since we support max width of VMID
-  val VMID = RW(44 - 1 + VMIDLEN, 44)
-  val PPN = RW(43, 0)
+  val VMID = RW(44 - 1 + VMIDLEN, 44).withReset(0.U)
+  val PPN = RW(43, 0).withReset(0.U)
 }
 
 class HEnvCfg extends EnvCfg {
