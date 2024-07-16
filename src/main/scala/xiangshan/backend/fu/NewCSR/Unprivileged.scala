@@ -16,12 +16,12 @@ import scala.collection.immutable.SeqMap
 trait Unprivileged { self: NewCSR with MachineLevel with SupervisorLevel =>
 
   val fcsr = Module(new CSRModule("Fcsr", new CSRBundle {
-    val NX = WARL(0, wNoFilter)
-    val UF = WARL(1, wNoFilter)
-    val OF = WARL(2, wNoFilter)
-    val DZ = WARL(3, wNoFilter)
-    val NV = WARL(4, wNoFilter)
-    val FRM = WARL(7, 5, wNoFilter)
+    val NX = WARL(0, wNoFilter).withReset(0.U)
+    val UF = WARL(1, wNoFilter).withReset(0.U)
+    val OF = WARL(2, wNoFilter).withReset(0.U)
+    val DZ = WARL(3, wNoFilter).withReset(0.U)
+    val NV = WARL(4, wNoFilter).withReset(0.U)
+    val FRM = WARL(7, 5, wNoFilter).withReset(0.U)
   }) with HasRobCommitBundle {
     val wAliasFflags = IO(Input(new CSRAddrWriteBundle(new CSRFFlagsBundle)))
     val wAliasFfm = IO(Input(new CSRAddrWriteBundle(new CSRFrmBundle)))
@@ -51,7 +51,7 @@ trait Unprivileged { self: NewCSR with MachineLevel with SupervisorLevel =>
 
   // vec
   val vstart = Module(new CSRModule("Vstart", new CSRBundle {
-    val vstart = RW(VlWidth - 2, 0) // hold [0, 128)
+    val vstart = RW(VlWidth - 2, 0).withReset(0.U) // hold [0, 128)
   }) with HasRobCommitBundle {
     // Todo make The use of vstart values greater than the largest element index for the current SEW setting is reserved.
     // Not trap
@@ -68,14 +68,14 @@ trait Unprivileged { self: NewCSR with MachineLevel with SupervisorLevel =>
     .setAddr(CSRs.vstart)
 
   val vcsr = Module(new CSRModule("Vcsr", new CSRBundle {
-    val VXSAT = RW(   0)
-    val VXRM  = RW(2, 1)
+    val VXSAT = RW(   0).withReset(0.U)
+    val VXRM  = RW(2, 1).withReset(0.U)
   }) with HasRobCommitBundle {
     val wAliasVxsat = IO(Input(new CSRAddrWriteBundle(new CSRBundle {
-      val VXSAT = RW(0)
+      val VXSAT = RW(0).withReset(0.U)
     })))
     val wAlisaVxrm = IO(Input(new CSRAddrWriteBundle(new CSRBundle {
-      val VXRM = RW(1, 0)
+      val VXRM = RW(1, 0).withReset(0.U)
     })))
     val vxsat = IO(Output(Vxsat()))
     val vxrm  = IO(Output(Vxrm()))
@@ -93,7 +93,7 @@ trait Unprivileged { self: NewCSR with MachineLevel with SupervisorLevel =>
   }).setAddr(CSRs.vcsr)
 
   val vl = Module(new CSRModule("Vl", new CSRBundle {
-    val VL = RO(VlWidth - 1, 0)
+    val VL = RO(VlWidth - 1, 0).withReset(0.U)
   }))
     .setAddr(CSRs.vl)
 
@@ -110,14 +110,14 @@ trait Unprivileged { self: NewCSR with MachineLevel with SupervisorLevel =>
     .setAddr(CSRs.vlenb)
 
   val cycle = Module(new CSRModule("cycle", new CSRBundle {
-    val cycle = RO(63, 0)
+    val cycle = RO(63, 0).withReset(0.U)
   }) with HasMHPMSink {
     regOut.cycle := mHPM.cycle
   })
     .setAddr(CSRs.cycle)
 
   val time = Module(new CSRModule("time", new CSRBundle {
-    val time = RO(63, 0)
+    val time = RO(63, 0).withReset(0.U)
   }) with HasMHPMSink {
     val updated = IO(Output(Bool()))
     val stime  = IO(Output(UInt(64.W)))
@@ -137,7 +137,7 @@ trait Unprivileged { self: NewCSR with MachineLevel with SupervisorLevel =>
     .setAddr(CSRs.time)
 
   val instret = Module(new CSRModule("instret", new CSRBundle {
-    val instret = RO(63, 0)
+    val instret = RO(63, 0).withReset(0.U)
   }) with HasMHPMSink {
     regOut.instret := mHPM.instret
   })
@@ -145,7 +145,7 @@ trait Unprivileged { self: NewCSR with MachineLevel with SupervisorLevel =>
 
   val hpmcounters: Seq[CSRModule[_]] = (3 to 0x1F).map(num =>
     Module(new CSRModule(s"Hpmcounter$num", new CSRBundle {
-      val hpmcounter = RO(63, 0)
+      val hpmcounter = RO(63, 0).withReset(0.U)
     }) with HasMHPMSink {
       regOut.hpmcounter := mHPM.hpmcounters(num - 3)
     }).setAddr(CSRs.cycle + num)
@@ -197,23 +197,23 @@ trait Unprivileged { self: NewCSR with MachineLevel with SupervisorLevel =>
 }
 
 class CSRVTypeBundle extends CSRBundle {
-  val VILL  = RO(  63)
-  val VMA   = RO(   7)
-  val VTA   = RO(   6)
-  val VSEW  = RO(5, 3)
-  val VLMUL = RO(2, 0)
+  val VILL  = RO(  63).withReset(0.U)
+  val VMA   = RO(   7).withReset(0.U)
+  val VTA   = RO(   6).withReset(0.U)
+  val VSEW  = RO(5, 3).withReset(0.U)
+  val VLMUL = RO(2, 0).withReset(0.U)
 }
 
 class CSRFrmBundle extends CSRBundle {
-  val FRM = WARL(2, 0, wNoFilter)
+  val FRM = WARL(2, 0, wNoFilter).withReset(0.U)
 }
 
 class CSRFFlagsBundle extends CSRBundle {
-  val NX = WARL(0, wNoFilter)
-  val UF = WARL(1, wNoFilter)
-  val OF = WARL(2, wNoFilter)
-  val DZ = WARL(3, wNoFilter)
-  val NV = WARL(4, wNoFilter)
+  val NX = WARL(0, wNoFilter).withReset(0.U)
+  val UF = WARL(1, wNoFilter).withReset(0.U)
+  val OF = WARL(2, wNoFilter).withReset(0.U)
+  val DZ = WARL(3, wNoFilter).withReset(0.U)
+  val NV = WARL(4, wNoFilter).withReset(0.U)
 }
 
 object VlenbField extends CSREnum with ROApply {

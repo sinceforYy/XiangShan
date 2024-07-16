@@ -236,13 +236,13 @@ class SISelectBundle extends CSRBundle {
 }
 
 class TopIBundle extends CSRBundle {
-  val IID   = RO(27, 16)
-  val IPRIO = RO(7, 0)
+  val IID   = RO(27, 16).withReset(0.U)
+  val IPRIO = RO(7, 0).withReset(0.U)
 }
 
 class TopEIBundle extends CSRBundle {
-  val IID   = RW(26, 16)
-  val IPRIO = RW(10, 0)
+  val IID   = RW(26, 16).withReset(0.U)
+  val IPRIO = RW(10, 0).withReset(0.U)
 }
 
 class IprioBundle extends CSRBundle {

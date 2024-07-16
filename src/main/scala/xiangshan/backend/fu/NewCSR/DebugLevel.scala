@@ -107,7 +107,7 @@ trait DebugLevel { self: NewCSR =>
 // tselect
 class TselectBundle(triggerNum: Int) extends CSRBundle{
   override val len: Int = log2Up(triggerNum)
-  val ALL = WARL(len - 1, 0, wNoEffectWhen(WriteTselect))
+  val ALL = WARL(len - 1, 0, wNoEffectWhen(WriteTselect)).withReset(0.U)
   def WriteTselect(wdata: UInt) = {
     wdata >= triggerNum.U
   }
@@ -117,7 +117,7 @@ class TselectBundle(triggerNum: Int) extends CSRBundle{
 class Tdata1Bundle extends CSRBundle{
   val TYPE    = Tdata1Type(63, 60, wNoFilter).withReset(Tdata1Type.Disabled)
   val DMODE   = RW(59).withReset(0.U)
-  val DATA    = RW(58, 0)
+  val DATA    = RW(58, 0).withReset(0.U).withReset(0.U)
 
   def getTriggerAction: CSREnumType = {
     val res = Wire(new Mcontrol)
@@ -249,7 +249,7 @@ object TrigMatch extends CSREnum with WARLApply {
 
 // tdata2
 class Tdata2Bundle extends CSRBundle{
-  val ALL = RW(63, 0)
+  val ALL = RW(63, 0).withReset(0.U)
 }
 
 // Tinfo
@@ -269,7 +269,7 @@ class TcontrolBundle extends CSRBundle{
 
 // Dscratch
 class DscratchBundle extends CSRBundle{
-  val ALL   = RW(63, 0)
+  val ALL   = RW(63, 0).withReset(0.U)
 }
 
 
