@@ -209,7 +209,7 @@ class CSRVTypeBundle extends CSRBundle {
 }
 
 class CSRFrmBundle extends CSRBundle {
-  val FRM = WARL(2, 0, wNoFilter)
+  val FRM = WARL(2, 0, wNoFilter).withReset(0.U)
 }
 
 class CSRFFlagsBundle extends CSRBundle {
