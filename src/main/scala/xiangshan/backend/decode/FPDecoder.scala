@@ -54,6 +54,7 @@ class FPToVecDecoder(implicit p: Parameters) extends XSModule {
     FMUL_S, FDIV_S, FSQRT_S,
     FMADD_S, FMSUB_S, FNMADD_S, FNMSUB_S,
     FCLASS_S, FSGNJ_S, FSGNJX_S, FSGNJN_S,
+    FLEQ_S, FLTQ_S, FMINM_S, FMAXM_S,
   )
   val isFP32Instr = isFP32Instrs.map(io.instr === _).reduce(_ || _)
   val isFP64Instrs = Seq(
