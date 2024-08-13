@@ -31,17 +31,31 @@ class IntFPToVec(cfg: FuConfig)(implicit p: Parameters) extends PipedFuncUnit(cf
   protected val in = io.in.bits
   protected val out = io.out.bits
 
-  // vsew is the lowest 2 bits of fuOpType
-  private val isImm = IF2VectorType.isImm(in.ctrl.fuOpType(4, 2))
-  // when needDup is true, the scalar data is duplicated in vector register
-  private val needDup = IF2VectorType.needDup(in.ctrl.fuOpType(4, 2))
-  // when isFmv is true, the high bits of the scalar data is 1
-  private val isFmv = IF2VectorType.isFmv(in.ctrl.fuOpType(4, 2))
+  private val isFliS = in.ctrl.fuOpType(8) && !in.ctrl.fuOpType(7) && !in.ctrl.fuOpType(6)
+  private val isFliD = in.ctrl.fuOpType(8) && !in.ctrl.fuOpType(7) &&  in.ctrl.fuOpType(6)
+  private val isFli = isFliS || isFliD
 
-  private val isFp = IF2VectorType.isFp(in.ctrl.fuOpType(4, 2))
+  private val FliData = Wire(UInt(XLEN.W))
+
+  private val FliSTable = Module(new FliSTable)
+  private val FliDTable = Module(new FliDTable)
+
+  FliSTable.src := in.data.src(0)
+  FliDTable.src := in.data.src(0)
+
+  FliData := Mux1H(Seq(isFliS, isFliD), Seq(Cat(~0.U(32.W), FliSTable.out, 0.U(16.W)), Cat(FliDTable.out, 0.U(48.W))))
+
+  // vsew is the lowest 2 bits of fuOpType
+  private val isImm = Mux(!isFli, IF2VectorType.isImm(in.ctrl.fuOpType(4, 2)), 0.U).asBool
+  // when needDup is true, the scalar data is duplicated in vector register
+  private val needDup = Mux(!isFli, IF2VectorType.needDup(in.ctrl.fuOpType(4, 2)), 0.U).asBool
+  // when isFmv is true, the high bits of the scalar data is 1
+  private val isFmv = Mux(!isFli, IF2VectorType.isFmv(in.ctrl.fuOpType(4, 2)), 0.U).asBool
+
+  private val isFp = Mux(!isFli, IF2VectorType.isFp(in.ctrl.fuOpType(4, 2)), 0.U).asBool
 
   // imm use src(1), scalar use src(0)
-  private val scalaData = Mux(isImm, in.data.src(1), in.data.src(0))
+  private val scalaData = Mux(!isFli, Mux(isImm, in.data.src(1), in.data.src(0)), FliData)
   // vsew is the lowest 2 bits of fuOpType
   private val vsew = in.ctrl.fuOpType(1, 0)
   private val dataWidth = cfg.destDataBits

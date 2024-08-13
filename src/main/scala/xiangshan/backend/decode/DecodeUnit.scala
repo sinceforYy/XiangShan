@@ -492,6 +492,26 @@ object ZicondDecode extends DecodeConstants {
   )
 }
 
+object ZfaDecode extends DecodeConstants {
+  override val decodeArray: Array[(BitPat, XSDecodeBase)] = Array(
+    FLI_S       -> FDecode(SrcType.no, SrcType.X, SrcType.X, FuType.f2v, IF2VectorType.FMX_W_X, fWen = T, canRobCompress = T),
+    FLI_D       -> FDecode(SrcType.no, SrcType.X, SrcType.X, FuType.f2v, IF2VectorType.FMX_W_X, fWen = T, canRobCompress = T),
+    FMINM_S     -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FuOpType.X, fWen = T, canRobCompress = T),
+    FMINM_D     -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FuOpType.X, fWen = T, canRobCompress = T),
+    FMAXM_S     -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FuOpType.X, fWen = T, canRobCompress = T),
+    FMAXM_D     -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FuOpType.X, fWen = T, canRobCompress = T),
+    FROUND_S    -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FuOpType.X, fWen = T, canRobCompress = T),
+    FROUND_D    -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FuOpType.X, fWen = T, canRobCompress = T),
+    FROUNDNX_S  -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FuOpType.X, fWen = T, canRobCompress = T),
+    FROUNDNX_D  -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FuOpType.X, fWen = T, canRobCompress = T),
+    FCVTMOD_W_D -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FuOpType.X, xWen = T, canRobCompress = T),
+    FLEQ_S      -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FuOpType.X, xWen = T, canRobCompress = T),
+    FLEQ_D      -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FuOpType.X, xWen = T, canRobCompress = T),
+    FLTQ_S      -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FuOpType.X, xWen = T, canRobCompress = T),
+    FLTQ_D      -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FuOpType.X, xWen = T, canRobCompress = T),
+  )
+}
+
 /**
  * XiangShan Trap Decode constants
  */
@@ -723,7 +743,8 @@ class DecodeUnit(implicit p: Parameters) extends XSModule with DecodeUnitConstan
     SvinvalDecode.table ++
     HypervisorDecode.table ++
     VecDecoder.table ++
-    ZicondDecode.table
+    ZicondDecode.table ++
+    ZfaDecode.table
 
   require(decode_table.map(_._2.length == 15).reduce(_ && _), "Decode tables have different column size")
   // assertion for LUI: only LUI should be assigned `selImm === SelImm.IMM_U && fuType === FuType.alu`
@@ -1013,6 +1034,8 @@ class DecodeUnit(implicit p: Parameters) extends XSModule with DecodeUnitConstan
 
   }
 
+  val isFLI = FuType.FuTypeOrR(decodedInst.fuType, FuType.f2v) && (decodedInst.fuOpType === IF2VectorType.FMX_W_X)
+
   io.deq.decodedInst := decodedInst
   io.deq.decodedInst.rfWen := (decodedInst.ldest =/= 0.U) && decodedInst.rfWen
   io.deq.decodedInst.fuType := Mux1H(Seq(
@@ -1036,6 +1059,7 @@ class DecodeUnit(implicit p: Parameters) extends XSModule with DecodeUnitConstan
     isCsrrVl    -> VSETOpType.csrrvl,
     isCsrrVlenb -> ALUOpType.add,
     isCSRR      -> CSROpType.ro,
+    isFLI       -> Cat(1.U, inst.FMT, inst.RS1)
   ))
 
   io.deq.decodedInst.blockBackward := MuxCase(decodedInst.blockBackward, Seq(
