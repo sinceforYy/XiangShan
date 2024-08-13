@@ -658,6 +658,15 @@ package object xiangshan {
     def apply() = UInt(2.W)
   }
 
+  object FALUOpType {
+    def fminm = "b11110".U
+    def fmaxm = "b10011".U
+    def fleq  = "b11100".U
+    def fltq  = "b11011".U
+
+    def apply() = UInt(5.W)
+  }
+
   object SelImm {
     def IMM_X  = "b0111".U
     def IMM_S  = "b1110".U
