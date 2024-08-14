@@ -667,6 +667,13 @@ package object xiangshan {
     def apply() = UInt(5.W)
   }
 
+  object FCVTOpType {
+    def fround      = "b0_10_000100".U
+    def froundnx    = "b1_10_000100".U
+
+    def apply() = UInt(9.W)
+  }
+
   object SelImm {
     def IMM_X  = "b0111".U
     def IMM_S  = "b1110".U
