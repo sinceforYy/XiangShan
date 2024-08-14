@@ -504,7 +504,7 @@ object ZfaDecode extends DecodeConstants {
     FROUND_D    -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FCVTOpType.fround,   fWen = T, canRobCompress = T),
     FROUNDNX_S  -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FCVTOpType.froundnx, fWen = T, canRobCompress = T),
     FROUNDNX_D  -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FCVTOpType.froundnx, fWen = T, canRobCompress = T),
-    FCVTMOD_W_D -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FuOpType.X, xWen = T, canRobCompress = T),
+    FCVTMOD_W_D -> FDecode(SrcType.fp, SrcType.X,  SrcType.X, FuType.fcvt, FCVTOpType.fcvtmod_w_d, xWen = T, canRobCompress = T),
     FLEQ_S      -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FALUOpType.fleq, xWen = T, canRobCompress = T),
     FLEQ_D      -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FALUOpType.fleq, xWen = T, canRobCompress = T),
     FLTQ_S      -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FALUOpType.fltq, xWen = T, canRobCompress = T),

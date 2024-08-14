@@ -23,8 +23,9 @@ class FCVT(cfg: FuConfig)(implicit p: Parameters) extends FpPipedFuncUnit(cfg) {
   private val isFoundType = opcode(7, 0) === "b10_000100".U
   private val isFround  = !opcode(8) && isFoundType
   private val isFoundnx =  opcode(8) && isFoundType
+  private val isFcvtmod = opcode === "b1_10_010001".U
 
-  private val isRtz = opcode(2) & opcode(1)
+  private val isRtz = opcode(2) & opcode(1) | isFcvtmod
   private val isRod = opcode(2) & !opcode(1) & opcode(0)
   private val isFrm = !isRtz && !isRod
   private val vfcvtRm = Mux1H(
@@ -67,7 +68,7 @@ class FCVT(cfg: FuConfig)(implicit p: Parameters) extends FpPipedFuncUnit(cfg) {
   val outIs16bits = RegNext(RegNext(outputWidth1H(1)))
   val outIs32bits = RegNext(RegNext(outputWidth1H(2)))
   val outIsInt = !outCtrl.fuOpType(6)
-  val outIsMvInst = outCtrl.fuOpType(8) & !outCtrl.fuOpType(2)
+  val outIsMvInst = outCtrl.fuOpType === "b1_1000_0000".U
 
   // modules
   val fcvt = Module(new VectorCvt(XLEN))
@@ -78,6 +79,7 @@ class FCVT(cfg: FuConfig)(implicit p: Parameters) extends FpPipedFuncUnit(cfg) {
   fcvt.io.rm := vfcvtRm
   fcvt.io.isFpToVecInst := true.B
   fcvt.io.isFround := Cat(isFoundnx, isFround)
+  fcvt.io.isFcvtmod := isFcvtmod
 
 
   //cycle2

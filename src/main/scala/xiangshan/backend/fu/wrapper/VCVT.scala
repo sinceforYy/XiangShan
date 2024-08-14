@@ -69,7 +69,7 @@ class VCVT(cfg: FuConfig)(implicit p: Parameters) extends VecPipedFuncUnit(cfg) 
   val outputWidth1H = output1H
   val outIs32bits = RegNext(RegNext(outputWidth1H(2)))
   val outIsInt = !outCtrl.fuOpType(6)
-  val outIsMvInst = outCtrl.fuOpType(8) & !outCtrl.fuOpType(2)
+  val outIsMvInst = outCtrl.fuOpType === "b1_1000_0000".U
 
   val outEew = RegEnable(RegEnable(Mux1H(output1H, Seq(0,1,2,3).map(i => i.U)), fire), fireReg)
   private val needNoMask = outVecCtrl.fpu.isFpToVecInst
@@ -220,6 +220,7 @@ class VectorCvtTop(vlen: Int, xlen: Int) extends Module{
   vectorCvt0.rm := rm
   vectorCvt0.isFpToVecInst := isFpToVecInst
   vectorCvt0.isFround := 0.U
+  vectorCvt0.isFcvtmod := false.B
 
   val vectorCvt1 = Module(new VectorCvt(xlen))
   vectorCvt1.fire := fire
@@ -229,6 +230,7 @@ class VectorCvtTop(vlen: Int, xlen: Int) extends Module{
   vectorCvt1.rm := rm
   vectorCvt1.isFpToVecInst := isFpToVecInst
   vectorCvt1.isFround := 0.U
+  vectorCvt1.isFcvtmod := false.B
 
   val isNarrowCycle2 = RegEnable(RegEnable(isNarrow, fire), fireReg)
   val outputWidth1HCycle2 = RegEnable(RegEnable(outputWidth1H, fire), fireReg)
