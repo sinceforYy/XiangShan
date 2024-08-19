@@ -494,8 +494,8 @@ object ZicondDecode extends DecodeConstants {
 
 object ZfaDecode extends DecodeConstants {
   override val decodeArray: Array[(BitPat, XSDecodeBase)] = Array(
-    FLI_S       -> FDecode(SrcType.no, SrcType.X, SrcType.X, FuType.f2v, IF2VectorType.FMX_W_X, fWen = T, canRobCompress = T),
-    FLI_D       -> FDecode(SrcType.no, SrcType.X, SrcType.X, FuType.f2v, IF2VectorType.FMX_W_X, fWen = T, canRobCompress = T),
+    FLI_S       -> FDecode(SrcType.no, SrcType.X, SrcType.X, FuType.f2v, FuOpType.X, fWen = T, canRobCompress = T),
+    FLI_D       -> FDecode(SrcType.no, SrcType.X, SrcType.X, FuType.f2v, FuOpType.X, fWen = T, canRobCompress = T),
     FMINM_S     -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FALUOpType.fminm, fWen = T, canRobCompress = T),
     FMINM_D     -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FALUOpType.fminm, fWen = T, canRobCompress = T),
     FMAXM_S     -> FDecode(SrcType.fp, SrcType.fp, SrcType.X, FuType.falu, FALUOpType.fmaxm, fWen = T, canRobCompress = T),
@@ -999,6 +999,9 @@ class DecodeUnit(implicit p: Parameters) extends XSModule with DecodeUnitConstan
   val isPreR = isSoftPrefetch && inst.RS2 === 1.U(5.W)
   val isPreI = isSoftPrefetch && inst.RS2 === 0.U(5.W)
 
+  // for fli.s|fli.d instruction
+  val isFLI = inst.FUNCT7 === BitPat("b11110??") && inst.RS2 === 1.U && inst.RM === 0.U && inst.OPCODE5Bit === OPCODE5Bit.OP_FP
+
   when (isCsrrVl) {
     // convert to vsetvl instruction
     decodedInst.srcType(0) := SrcType.no
@@ -1034,7 +1037,6 @@ class DecodeUnit(implicit p: Parameters) extends XSModule with DecodeUnitConstan
 
   }
 
-  val isFLI = FuType.FuTypeOrR(decodedInst.fuType, FuType.f2v) && (decodedInst.fuOpType === IF2VectorType.FMX_W_X)
 
   io.deq.decodedInst := decodedInst
   io.deq.decodedInst.rfWen := (decodedInst.ldest =/= 0.U) && decodedInst.rfWen
@@ -1059,7 +1061,7 @@ class DecodeUnit(implicit p: Parameters) extends XSModule with DecodeUnitConstan
     isCsrrVl    -> VSETOpType.csrrvl,
     isCsrrVlenb -> ALUOpType.add,
     isCSRR      -> CSROpType.ro,
-    isFLI       -> Cat(1.U, inst.FMT, inst.RS1)
+    isFLI       -> Cat(1.U, inst.FMT, inst.RS1),
   ))
 
   io.deq.decodedInst.blockBackward := MuxCase(decodedInst.blockBackward, Seq(

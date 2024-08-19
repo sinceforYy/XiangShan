@@ -31,8 +31,8 @@ class IntFPToVec(cfg: FuConfig)(implicit p: Parameters) extends PipedFuncUnit(cf
   protected val in = io.in.bits
   protected val out = io.out.bits
 
-  private val isFliS = in.ctrl.fuOpType(8) && !in.ctrl.fuOpType(7) && !in.ctrl.fuOpType(6)
-  private val isFliD = in.ctrl.fuOpType(8) && !in.ctrl.fuOpType(7) &&  in.ctrl.fuOpType(6)
+  private val isFliS = in.ctrl.fuOpType(7) && !in.ctrl.fuOpType(6) && !in.ctrl.fuOpType(5)
+  private val isFliD = in.ctrl.fuOpType(7) && !in.ctrl.fuOpType(6) &&  in.ctrl.fuOpType(5)
   private val isFli = isFliS || isFliD
 
   private val FliData = Wire(UInt(XLEN.W))
@@ -40,8 +40,8 @@ class IntFPToVec(cfg: FuConfig)(implicit p: Parameters) extends PipedFuncUnit(cf
   private val FliSTable = Module(new FliSTable)
   private val FliDTable = Module(new FliDTable)
 
-  FliSTable.src := in.data.src(0)
-  FliDTable.src := in.data.src(0)
+  FliSTable.src := in.ctrl.fuOpType(4, 0)
+  FliDTable.src := in.ctrl.fuOpType(4, 0)
 
   FliData := Mux1H(Seq(isFliS, isFliD), Seq(Cat(~0.U(32.W), FliSTable.out, 0.U(16.W)), Cat(FliDTable.out, 0.U(48.W))))
 
