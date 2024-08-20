@@ -909,6 +909,11 @@ class DecodeUnit(implicit p: Parameters) extends XSModule with DecodeUnitConstan
     VFWCVT_XU_F_V, VFWCVT_X_F_V, VFWCVT_RTZ_XU_F_V, VFWCVT_RTZ_X_F_V, VFWCVT_F_XU_V, VFWCVT_F_X_V, VFWCVT_F_F_V,
     VFNCVT_XU_F_W, VFNCVT_X_F_W, VFNCVT_RTZ_XU_F_W, VFNCVT_RTZ_X_F_W, VFNCVT_F_XU_W, VFNCVT_F_X_W, VFNCVT_F_F_W,
     VFNCVT_ROD_F_F_W, VFRSQRT7_V, VFREC7_V,
+    // zfa
+    FLEQ_S, FLEQ_D, FLTQ_S, FLTQ_D,
+    FMINM_S, FMINM_D, FMAXM_S, FMAXM_D,
+    FROUND_S, FROUND_D, FROUNDNX_S, FROUNDNX_D,
+    FCVTMOD_W_D,
   )
 
   private val scalaNeedFrmInsts = Seq(
