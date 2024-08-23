@@ -20,9 +20,8 @@ class FCVT(cfg: FuConfig)(implicit p: Parameters) extends FpPipedFuncUnit(cfg) {
   private val src0 = inData.src(0)
   private val sew = fp_fmt
 
-  private val isFoundType = opcode(7, 0) === "b10_000100".U
-  private val isFround  = !opcode(8) && isFoundType
-  private val isFoundnx =  opcode(8) && isFoundType
+  private val isFround  = opcode(7, 0) === "b11_000000".U
+  private val isFoundnx = opcode(7, 0) === "b11_000100".U
   private val isFcvtmod = opcode === "b1_10_010001".U
 
   private val isRtz = opcode(2) & opcode(1) | isFcvtmod

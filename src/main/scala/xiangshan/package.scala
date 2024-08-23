@@ -668,8 +668,8 @@ package object xiangshan {
   }
 
   object FCVTOpType {
-    def fround      = "b0_10_000100".U
-    def froundnx    = "b1_10_000100".U
+    def fround      = "b0_11_000000".U
+    def froundnx    = "b0_11_000100".U
     def fcvtmod_w_d = "b1_10_010001".U
 
     def apply() = UInt(9.W)
