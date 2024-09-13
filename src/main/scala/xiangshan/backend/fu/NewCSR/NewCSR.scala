@@ -764,12 +764,7 @@ class NewCSR(implicit val p: Parameters) extends Module
     (addr >= CSRs.mcycle.U) && (addr <= CSRs.mhpmcounter31.U) ||
     (addr === mcountinhibit.addr.U) ||
     (addr >= CSRs.cycle.U) && (addr <= CSRs.hpmcounter31.U) ||
-    (addr === CSRs.mip.U) || (addr === CSRs.sip.U) || (addr === CSRs.vsip.U) ||
-    (addr === CSRs.hip.U) || (addr === CSRs.mvip.U) || (addr === CSRs.hvip.U) ||
-    Cat(aiaSkipCSRs.map(_.addr.U === addr)).orR ||
-    (addr === CSRs.menvcfg.U) ||
-    (addr === CSRs.henvcfg.U) ||
-    (addr === CSRs.stimecmp.U)
+    Cat(aiaSkipCSRs.map(_.addr.U === addr)).orR
   )
 
   // flush
@@ -1253,7 +1248,7 @@ class NewCSR(implicit val p: Parameters) extends Module
     diffCSRState.mcause         := mcause.rdata.asUInt
     diffCSRState.scause         := scause.rdata.asUInt
     diffCSRState.satp           := satp.rdata.asUInt
-    diffCSRState.mip            := mip.regOut.asUInt
+    diffCSRState.mip            := mip.rdata.asUInt
     diffCSRState.mie            := mie.rdata.asUInt
     diffCSRState.mscratch       := mscratch.rdata.asUInt
     diffCSRState.sscratch       := sscratch.rdata.asUInt
@@ -1308,6 +1303,33 @@ class NewCSR(implicit val p: Parameters) extends Module
     diffHCSRState.vstval      := vstval.rdata.asUInt
     diffHCSRState.vsatp       := vsatp.rdata.asUInt
     diffHCSRState.vsscratch   := vsscratch.rdata.asUInt
+
+    val platformIRPMeipChange = (!platformIRP.MEIP && RegNext(platformIRP.MEIP) || platformIRP.MEIP && !RegNext(platformIRP.MEIP)) ||
+                                (!fromAIA.meip && RegNext(fromAIA.meip) || fromAIA.meip && !RegNext(fromAIA.meip))
+    val platformIRPMtipChange = (!platformIRP.MTIP && RegNext(platformIRP.MTIP) || platformIRP.MTIP && !RegNext(platformIRP.MTIP))
+    val platformIRPMsipChange = (!platformIRP.MSIP && RegNext(platformIRP.MSIP) || platformIRP.MSIP && !RegNext(platformIRP.MSIP))
+    val platformIRPSeipChange = (!platformIRP.SEIP && RegNext(platformIRP.SEIP) || platformIRP.SEIP && !RegNext(platformIRP.SEIP)) ||
+                                (!fromAIA.seip && RegNext(fromAIA.seip) || fromAIA.seip && !RegNext(fromAIA.seip))
+    val platformIRPStipChange  = (!sstcIRGen.o.STIP && RegNext(sstcIRGen.o.STIP) || sstcIRGen.o.STIP && !RegNext(sstcIRGen.o.STIP))
+    val platformIRPVseipChange = (!platformIRP.VSEIP && RegNext(platformIRP.VSEIP) || platformIRP.VSEIP && !RegNext(platformIRP.VSEIP)) ||
+                                 (!hgeip.rdata.asUInt(hstatus.regOut.VGEIN.asUInt) && RegNext(hgeip.rdata.asUInt(hstatus.regOut.VGEIN.asUInt)) || hgeip.rdata.asUInt(hstatus.regOut.VGEIN.asUInt) && !RegNext(hgeip.rdata.asUInt(hstatus.regOut.VGEIN.asUInt)))
+    val platformIRPVstipChange = (!platformIRP.VSTIP && RegNext(platformIRP.VSTIP) || platformIRP.VSTIP && !RegNext(platformIRP.VSTIP))
+    val lcofiReqChange         =  !lcofiReq && RegNext(lcofiReq) || lcofiReq && !RegNext(lcofiReq)
+
+    val diffNonRegInterruptPendingEvent = DifftestModule(new DiffNonRegInterruptPendingEvent)
+    diffNonRegInterruptPendingEvent.coreid           := hartId
+    diffNonRegInterruptPendingEvent.valid            := platformIRPMeipChange || platformIRPMtipChange || platformIRPMsipChange ||
+                                                        platformIRPSeipChange || platformIRPStipChange ||
+                                                        platformIRPVseipChange || platformIRPVstipChange ||
+                                                        lcofiReqChange
+    diffNonRegInterruptPendingEvent.platformIRPMeip  := platformIRP.MEIP || fromAIA.meip
+    diffNonRegInterruptPendingEvent.platformIRPMtip  := platformIRP.MTIP
+    diffNonRegInterruptPendingEvent.platformIRPMsip  := platformIRP.MSIP
+    diffNonRegInterruptPendingEvent.platformIRPSeip  := platformIRP.SEIP || fromAIA.seip
+    diffNonRegInterruptPendingEvent.platformIRPStip  := sstcIRGen.o.STIP
+    diffNonRegInterruptPendingEvent.platformIRPVseip := platformIRP.VSEIP || hgeip.rdata.asUInt(hstatus.regOut.VGEIN.asUInt)
+    diffNonRegInterruptPendingEvent.platformIRPVstip := sstcIRGen.o.VSTIP
+    diffNonRegInterruptPendingEvent.localCounterOverflowInterruptReq  := lcofiReq
 
   }
 }
