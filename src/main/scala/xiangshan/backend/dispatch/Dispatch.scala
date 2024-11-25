@@ -387,8 +387,9 @@ class Dispatch(implicit p: Parameters) extends XSModule with HasPerfEvents {
 
     XSDebug(io.toIntDq0.req(i).valid, p"pc 0x${Hexadecimal(io.toIntDq0.req(i).bits.pc)} int index $i\n")
     XSDebug(io.toIntDq1.req(i).valid, p"pc 0x${Hexadecimal(io.toIntDq1.req(i).bits.pc)} int index $i\n")
-    XSDebug(io.toVecDq.req(i).valid , p"pc 0x${Hexadecimal(io.toVecDq.req(i).bits.pc )} fp  index $i\n")
-    XSDebug(io.toLsDq.req(i).valid , p"pc 0x${Hexadecimal(io.toLsDq.req(i).bits.pc )} ls  index $i\n")
+    XSDebug(io.toFpDq.req(i).valid  , p"pc 0x${Hexadecimal(io.toFpDq.req(i).bits.pc  )} fp  index $i\n")
+    XSDebug(io.toVecDq.req(i).valid , p"pc 0x${Hexadecimal(io.toVecDq.req(i).bits.pc )} vec index $i\n")
+    XSDebug(io.toLsDq.req(i).valid  , p"pc 0x${Hexadecimal(io.toLsDq.req(i).bits.pc  )} ls  index $i\n")
   }
 
   val enq_dq0_cnt = io.toIntDq0.needAlloc.zip(io.toIntDq0.req.map(_.valid)).map{ case(needAlloc, valid) => needAlloc && valid}
@@ -433,11 +434,12 @@ class Dispatch(implicit p: Parameters) extends XSModule with HasPerfEvents {
   XSError(enqFireCnt > renameFireCnt, "enqFireCnt should not be greater than renameFireCnt\n")
 
   val stall_rob = hasValidInstr && !io.enqRob.canAccept && dqCanAccept
-  val stall_int_dq = hasValidInstr && io.enqRob.canAccept && !toIntDqCanAccept && io.toVecDq.canAccept && io.toLsDq.canAccept
-  val stall_int_dq0 = hasValidInstr && io.enqRob.canAccept && !io.toIntDq0.canAccept && io.toVecDq.canAccept && io.toLsDq.canAccept
-  val stall_int_dq1 = hasValidInstr && io.enqRob.canAccept && !io.toIntDq1.canAccept && io.toVecDq.canAccept && io.toLsDq.canAccept
-  val stall_fp_dq = hasValidInstr && io.enqRob.canAccept && toIntDqCanAccept && !io.toVecDq.canAccept && io.toLsDq.canAccept
-  val stall_ls_dq = hasValidInstr && io.enqRob.canAccept && toIntDqCanAccept && io.toVecDq.canAccept && !io.toLsDq.canAccept
+  val stall_int_dq = hasValidInstr && io.enqRob.canAccept && !toIntDqCanAccept && io.toFpDq.canAccept && io.toVecDq.canAccept && io.toLsDq.canAccept
+  val stall_int_dq0 = hasValidInstr && io.enqRob.canAccept && !io.toIntDq0.canAccept && io.toFpDq.canAccept && io.toVecDq.canAccept && io.toLsDq.canAccept
+  val stall_int_dq1 = hasValidInstr && io.enqRob.canAccept && !io.toIntDq1.canAccept && io.toFpDq.canAccept && io.toVecDq.canAccept && io.toLsDq.canAccept
+  val stall_fp_dq = hasValidInstr && io.enqRob.canAccept && toIntDqCanAccept && !io.toFpDq.canAccept && io.toVecDq.canAccept && io.toLsDq.canAccept
+  val stall_vec_dq = hasValidInstr && io.enqRob.canAccept && toIntDqCanAccept && io.toFpDq.canAccept && !io.toVecDq.canAccept && io.toLsDq.canAccept
+  val stall_ls_dq = hasValidInstr && io.enqRob.canAccept && toIntDqCanAccept && io.toFpDq.canAccept && io.toVecDq.canAccept && !io.toLsDq.canAccept
 
   XSPerfAccumulate("in_valid_count", PopCount(io.fromRename.map(_.valid)))
   XSPerfAccumulate("in_fire_count", PopCount(io.fromRename.map(_.fire)))
@@ -448,6 +450,7 @@ class Dispatch(implicit p: Parameters) extends XSModule with HasPerfEvents {
   XSPerfAccumulate("stall_cycle_int_dq0", stall_int_dq0)
   XSPerfAccumulate("stall_cycle_int_dq1", stall_int_dq1)
   XSPerfAccumulate("stall_cycle_fp_dq", stall_fp_dq)
+  XSPerfAccumulate("stall_cycle_vec_dq", stall_vec_dq)
   XSPerfAccumulate("stall_cycle_ls_dq", stall_ls_dq)
 
   val notIssue = !io.debugTopDown.fromRob.robHeadLsIssue
@@ -479,6 +482,7 @@ class Dispatch(implicit p: Parameters) extends XSModule with HasPerfEvents {
   stallReason.zip(io.stallReason.reason).zip(firedVec).zipWithIndex.map { case (((update, in), fire), idx) =>
     val headIsInt = FuType.isInt(io.robHead.getDebugFuType)  && io.robHeadNotReady
     val headIsFp  = FuType.isFArith(io.robHead.getDebugFuType)   && io.robHeadNotReady
+    val headIsVec = (FuType.isVArith(io.robHead.getDebugFuType) || FuType.isVsetRvfWvf(io.robHead.getDebugFuType)) && io.robHeadNotReady
     val headIsDiv = FuType.isDivSqrt(io.robHead.getDebugFuType) && io.robHeadNotReady
     val headIsLd  = io.robHead.getDebugFuType === FuType.ldu.U && io.robHeadNotReady || !io.lqCanAccept
     val headIsSt  = io.robHead.getDebugFuType === FuType.stu.U && io.robHeadNotReady || !io.sqCanAccept
@@ -494,7 +498,8 @@ class Dispatch(implicit p: Parameters) extends XSModule with HasPerfEvents {
       (in =/= OtherCoreStall.id.U && in =/= NoStall.id.U ) -> in                    ,
       // dispatch queue stall
       (!toIntDqCanAccept && !headIsInt && !io.robFull) -> IntDqStall.id.U       ,
-      (!io.toVecDq.canAccept  && !headIsFp  && !io.robFull) -> FpDqStall.id.U        ,
+      (!io.toFpDq.canAccept  && !headIsFp  && !io.robFull) -> FpDqStall.id.U        ,
+      (!io.toVecDq.canAccept && !headIsVec && !io.robFull) -> VecDqStall.id.U       ,
       (!io.toLsDq.canAccept  && !headIsLs  && !robLsFull ) -> LsDqStall.id.U        ,
       // rob stall
       (headIsAmo                                         ) -> AtomicStall.id.U      ,
@@ -503,6 +508,7 @@ class Dispatch(implicit p: Parameters) extends XSModule with HasPerfEvents {
       (headIsDiv                                         ) -> DivStall.id.U         ,
       (headIsInt                                         ) -> IntNotReadyStall.id.U ,
       (headIsFp                                          ) -> FPNotReadyStall.id.U  ,
+      (headIsVec                                         ) -> VecNoReadyStall.id.U  ,
       (renameReason(idx) =/= NoStall.id.U                ) -> renameReason(idx)     ,
       (decodeReason(idx) =/= NoStall.id.U                ) -> decodeReason(idx)     ,
     ))
@@ -528,6 +534,7 @@ class Dispatch(implicit p: Parameters) extends XSModule with HasPerfEvents {
     ("dispatch_stall_cycle_rob",    stall_rob                                                    ),
     ("dispatch_stall_cycle_int_dq", stall_int_dq                                                 ),
     ("dispatch_stall_cycle_fp_dq",  stall_fp_dq                                                  ),
+    ("dispatch_stall_cycle_vec_dq", stall_vec_dq                                                 ),
     ("dispatch_stall_cycle_ls_dq",  stall_ls_dq                                                  )
   )
   generatePerfEvent()

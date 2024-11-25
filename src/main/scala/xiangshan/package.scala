@@ -941,6 +941,7 @@ package object xiangshan {
     val DivStall = Value("DivStall") // int div, float div/sqrt
     val IntNotReadyStall = Value("IntNotReadyStall") // int-inst at rob head not issue
     val FPNotReadyStall = Value("FPNotReadyStall") // fp-inst at rob head not issue
+    val VecNoReadyStall = Value("VecNotReadyStall") // vec-inst at rob head not issue
     val MemNotReadyStall = Value("MemNotReadyStall") // mem-inst at rob head not issue
     // freelist full
     val IntFlStall = Value("IntFlStall")
@@ -952,6 +953,7 @@ package object xiangshan {
     // dispatch queue full
     val IntDqStall = Value("IntDqStall")
     val FpDqStall = Value("FpDqStall")
+    val VecDqStall = Value("VecDqStall")
     val LsDqStall = Value("LsDqStall")
 
     // memblock
