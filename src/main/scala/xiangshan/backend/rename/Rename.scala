@@ -658,6 +658,20 @@ class Rename(implicit p: Parameters) extends XSModule with HasCircularQueuePtrHe
       assert(x.bits.ldest =/= 0.U, "rfWen cannot be 1 when Int regfile ldest is 0")
     }
   }
+
+  for (i <- 0 until RenameWidth - 1) {
+    for (j <- (i + 1) until RenameWidth) {
+      val inst1IsFli = FuTypeOrR(io.in(i).bits.fuType, FuType.f2v) && io.in(i).bits.fuOpType(7)
+      val inst2IsFp = FuType.isFArith(io.in(j).bits.fuType)
+      val inst2LSrcIsEqualInst1LDest = io.in(j).bits.lsrc.zipWithIndex.map { case (src, num) =>
+        val isEqual = src === io.in(i).bits.ldest
+        isEqual
+      }.reduce(_ || _)
+      val fliFp = inst1IsFli && inst2IsFp && inst2LSrcIsEqualInst1LDest
+      XSPerfAccumulate(s"fli_fp_${i}_${j}", fliFp)
+    }
+  }
+
   val debugRedirect = RegEnable(io.redirect.bits, io.redirect.valid)
   // bad speculation
   val recStall = io.redirect.valid || io.rabCommits.isWalk
