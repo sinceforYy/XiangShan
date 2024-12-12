@@ -71,7 +71,6 @@ class VIAluDecoder (implicit p: Parameters) extends XSModule {
     BitPat(VipuType.vwredsum_vs)  -> List(BitPat(VAluOpcode.vredsum), sSew, sSew, sSew2),
 
     BitPat(VipuType.vcpop_m)      -> List(BitPat(VAluOpcode.vcpop), mask, mask, uSew),
-    BitPat(VipuType.vfirst_m)     -> List(BitPat(VAluOpcode.vfirst), mask, mask, uSew),
     BitPat(VipuType.vmsbf_m)      -> List(BitPat(VAluOpcode.vmsbf), mask, mask, mask),
     BitPat(VipuType.vmsif_m)      -> List(BitPat(VAluOpcode.vmsif), mask, mask, mask),
     BitPat(VipuType.vmsof_m)      -> List(BitPat(VAluOpcode.vmsof), mask, mask, mask),

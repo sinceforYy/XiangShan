@@ -35,7 +35,7 @@ import xiangshan.mem.GenRealFlowNum
 import xiangshan.backend.trace._
 import xiangshan.backend.decode.isa.bitfield.{OPCODE5Bit, XSInstBitFields}
 import xiangshan.backend.fu.util.CSRConst
-import yunsuan.{VfaluType, VipuType}
+import yunsuan.{VfaluType, VipuType, VclzType}
 
 class Rename(implicit p: Parameters) extends XSModule with HasCircularQueuePtrHelper with HasPerfEvents {
 
@@ -362,7 +362,7 @@ class Rename(implicit p: Parameters) extends XSModule with HasCircularQueuePtrHe
         !Seq(
           (FuType.vfalu, VfaluType.vfmv_f_s), // vfmv.f.s
           (FuType.vipu, VipuType.vcpop_m),    // vcpop.m
-          (FuType.vipu, VipuType.vfirst_m),   // vfirst.m
+          (FuType.vclz, VclzType.vfirst_m),   // vfirst.m
           (FuType.vipu, VipuType.vmv_x_s)     // vmv.x.s
         ).map(x => FuTypeOrR(in.bits.fuType, x._1) && in.bits.fuOpType === x._2).reduce(_ || _)
       ).reverse)
