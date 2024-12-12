@@ -61,6 +61,7 @@ object FuType extends OHEnumeration {
   val vfma = addType(name = "vfma")
   val vfdiv = addType(name = "vfdiv")
   val vfcvt = addType(name = "vfcvt")
+  val vclz = addType(name = "vclz")
   val vsetiwi = addType(name = "vsetiwi") // vset read rs write rd
   val vsetiwf = addType(name = "vsetiwf") // vset read rs write vconfig
   val vsetfwf = addType(name = "vsetfwf") // vset read old vl write vconfig
@@ -124,7 +125,7 @@ object FuType extends OHEnumeration {
   }
   val fpArithAll = Seq(falu, fcvt, fmac, fDivSqrt, f2v)
   val scalaMemAll = Seq(ldu, stu, mou)
-  val vecOPI = Seq(vipu, vialuF, vppu, vimac, vidiv)
+  val vecOPI = Seq(vipu, vialuF, vppu, vimac, vidiv, vclz)
   val vecOPF = Seq(vfpu, vfalu, vfma, vfdiv, vfcvt)
   val vecVSET = Seq(vsetiwi, vsetiwf, vsetfwf)
   val vecArith = vecOPI ++ vecOPF
@@ -260,7 +261,8 @@ object FuType extends OHEnumeration {
     vfalu -> "vfalu",
     vfma -> "vfma",
     vfdiv -> "vfdiv",
-    vfcvt -> "vfcvt"
+    vfcvt -> "vfcvt",
+    vclz -> "vclz"
   )
 }
 

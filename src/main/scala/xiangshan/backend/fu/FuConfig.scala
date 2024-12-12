@@ -161,7 +161,7 @@ case class FuConfig (
   def needVecCtrl: Boolean = {
     import FuType._
     Seq(falu, fmac, fDivSqrt, fcvt,
-      vipu, vialuF, vimac, vidiv, vfpu, vppu, vfalu, vfma, vfdiv, vfcvt, vldu, vstu).contains(fuType)
+      vipu, vialuF, vimac, vidiv, vfpu, vppu, vfalu, vfma, vfdiv, vfcvt, vclz, vldu, vstu).contains(fuType)
   }
 
   def needCriticalErrors: Boolean = Seq(FuType.csr).contains(fuType)
@@ -182,7 +182,7 @@ case class FuConfig (
                             fuType == FuType.vppu || fuType == FuType.vipu ||
                             fuType == FuType.vfalu || fuType == FuType.vfma ||
                             fuType == FuType.vfdiv || fuType == FuType.vfcvt ||
-                            fuType == FuType.vidiv
+                            fuType == FuType.vidiv || fuType == FuType.vclz
 
   def isVecMem: Boolean = fuType == FuType.vldu || fuType == FuType.vstu ||
                           fuType == FuType.vsegldu || fuType == FuType.vsegstu
@@ -690,6 +690,22 @@ object FuConfig {
     needSrcFrm = true,
   )
 
+  val VclzCfg = FuConfig(
+    name = "vclz",
+    fuType = FuType.vclz,
+    fuGen = (p: Parameters, cfg: FuConfig) => Module(new VCLZ(cfg)(p).suggestName("Vclz")),
+    srcData = Seq(
+      Seq(VecData(), VecData(), VecData(), V0Data(), VlData()),
+    ),
+    piped = true,
+    writeIntRf = true,
+    writeVecRf = true,
+    latency = CertainLatency(1),
+    vconfigWakeUp = true,
+    maskWakeUp = true,
+    destDataBits = 128,
+  )
+
   val FaluCfg = FuConfig(
     name = "falu",
     fuType = FuType.falu,
@@ -836,13 +852,13 @@ object FuConfig {
 
   def allConfigs = Seq(
     JmpCfg, BrhCfg, I2fCfg, I2vCfg, F2vCfg, CsrCfg, AluCfg, MulCfg, DivCfg, FenceCfg, BkuCfg, VSetRvfWvfCfg, VSetRiWvfCfg, VSetRiWiCfg,
-    LduCfg, StaCfg, StdCfg, MouCfg, MoudCfg, VialuCfg, VipuCfg, VlduCfg, VstuCfg, VseglduSeg, VsegstuCfg,
+    LduCfg, StaCfg, StdCfg, MouCfg, MoudCfg, VialuCfg, VipuCfg, VclzCfg, VlduCfg, VstuCfg, VseglduSeg, VsegstuCfg,
     FaluCfg, FmacCfg, FcvtCfg, FdivCfg,
     VfaluCfg, VfmaCfg, VfcvtCfg, HyldaCfg, HystaCfg
   )
 
   def VecArithFuConfigs = Seq(
-    VialuCfg, VimacCfg, VppuCfg, VipuCfg, VfaluCfg, VfmaCfg, VfcvtCfg
+    VialuCfg, VimacCfg, VppuCfg, VipuCfg, VfaluCfg, VfmaCfg, VfcvtCfg, VclzCfg
   )
 }
 

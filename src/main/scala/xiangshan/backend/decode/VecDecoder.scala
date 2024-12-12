@@ -10,7 +10,7 @@ import utils._
 import xiangshan.ExceptionNO.illegalInstr
 import xiangshan.backend.fu.FuType
 import xiangshan._
-import yunsuan.{VfpuType, VipuType, VimacType, VpermType, VialuFixType, VfaluType, VfmaType, VfdivType, VfcvtType, VidivType}
+import yunsuan.{VfpuType, VipuType, VimacType, VpermType, VialuFixType, VfaluType, VfmaType, VfdivType, VfcvtType, VidivType, VclzType}
 import xiangshan.backend.decode.Zvbb._
 
 abstract class VecDecode extends XSDecodeBase {
@@ -376,7 +376,7 @@ object VecDecoder extends DecodeConstants {
     VCPOP_M      -> OPMVV(T, FuType.vipu, VipuType.vcpop_m, T, F, F, UopSplitType.VEC_M0X, src1 = SrcType.no), // vcpop.m rd, vs2, vm
     VDIV_VV      -> OPMVV(T, FuType.vidiv, VidivType.vdiv, F, T, F, UopSplitType.VEC_VVV),
     VDIVU_VV     -> OPMVV(T, FuType.vidiv, VidivType.vdivu, F, T, F, UopSplitType.VEC_VVV),
-    VFIRST_M     -> OPMVV(T, FuType.vipu, VipuType.vfirst_m, T, F, F, src1 = SrcType.no), // vfirst.m rd, vs2, vm
+    VFIRST_M     -> OPMVV(T, FuType.vclz, VclzType.vfirst_m, T, F, F, src1 = SrcType.no), // vfirst.m rd, vs2, vm
     VID_V        -> OPMVV(T, FuType.vipu, VipuType.vid_v, F, T, F, UopSplitType.VEC_MVV, src1 = SrcType.no, src2 = SrcType.no), // vid.v vd, vm
     VIOTA_M      -> OPMVV(T, FuType.vipu, VipuType.viota_m, F, T, F, UopSplitType.VEC_MVV, src1 = SrcType.no), // viota.m vd, vs2, vm
 
@@ -436,8 +436,8 @@ object VecDecoder extends DecodeConstants {
     VBREV_V      -> OPMVV(T, FuType.vialuF, VialuFixType.vbrev_v,  F, T, F, UopSplitType.VEC_VVV, src1 = SrcType.no),
     VBREV8_V     -> OPMVV(T, FuType.vialuF, VialuFixType.vbrev8_v, F, T, F, UopSplitType.VEC_VVV, src1 = SrcType.no),
     VREV8_V      -> OPMVV(T, FuType.vialuF, VialuFixType.vrev8_v,  F, T, F, UopSplitType.VEC_VVV, src1 = SrcType.no),
-    VCLZ_V       -> OPMVV(T, FuType.vialuF, VialuFixType.vclz_v,   F, T, F, UopSplitType.VEC_VVV, src1 = SrcType.no),
-    VCTZ_V       -> OPMVV(T, FuType.vialuF, VialuFixType.vctz_v,   F, T, F, UopSplitType.VEC_VVV, src1 = SrcType.no),
+    VCLZ_V       -> OPMVV(T, FuType.vclz, VclzType.vclz_v, F, T, F, UopSplitType.VEC_VVV, src1 = SrcType.no),
+    VCTZ_V       -> OPMVV(T, FuType.vclz, VclzType.vctz_v, F, T, F, UopSplitType.VEC_VVV, src1 = SrcType.no),
     VCPOP_V      -> OPMVV(T, FuType.vialuF, VialuFixType.vcpop_v,  F, T, F, UopSplitType.VEC_VVV, src1 = SrcType.no),
   )
 
