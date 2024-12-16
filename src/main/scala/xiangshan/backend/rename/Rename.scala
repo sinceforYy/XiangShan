@@ -672,6 +672,24 @@ class Rename(implicit p: Parameters) extends XSModule with HasCircularQueuePtrHe
     }
   }
 
+  for (i <- 0 until RenameWidth - 1) {
+    val inst1IsFli = FuTypeOrR(io.in(i).bits.fuType, FuType.f2v) && io.in(i).bits.fuOpType(7)
+    val inst2IsFp = FuType.isFArith(io.in(i+1).bits.fuType)
+    val inst2LSrcIsEqualInst1LDest = io.in(i+1).bits.lsrc.zipWithIndex.map { case (src, num) =>
+      val isEqual = src === io.in(i).bits.ldest
+      isEqual
+    }
+    when (inst1IsFli && inst2IsFp) {
+      inst2LSrcIsEqualInst1LDest.zipWithIndex.foreach { case (equal, j) =>
+        when(equal) {
+          io.out(i + 1).bits.srcType(j) := SrcType.imm
+          io.out(i + 1).bits.imm := io.in(i).bits.fuOpType
+          io.out(i + 1).bits.selImm := SelImm.IMM_FLI
+        }
+      }
+    }
+  }
+
   val debugRedirect = RegEnable(io.redirect.bits, io.redirect.valid)
   // bad speculation
   val recStall = io.redirect.valid || io.rabCommits.isWalk

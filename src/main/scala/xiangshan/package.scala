@@ -697,7 +697,7 @@ package object xiangshan {
   }
 
   object SelImm {
-    def IMM_X  = "b0111".U
+//    def IMM_X  = "b0111".U
     def IMM_S  = "b1110".U
     def IMM_SB = "b0001".U
     def IMM_U  = "b0010".U
@@ -713,6 +713,8 @@ package object xiangshan {
     def IMM_VSETIVLI  = "b1101".U
     def IMM_LUI32 = "b1011".U
     def IMM_VRORVI = "b1111".U
+
+    def IMM_FLI = "b0111".U
 
     def X      = BitPat("b0000")
 
@@ -733,6 +735,7 @@ package object xiangshan {
         IMM_VSETIVLI.litValue  -> "VSETIVLI",
         IMM_LUI32.litValue     -> "LUI32",
         IMM_VRORVI.litValue    -> "VRORVI",
+        IMM_FLI.litValue       -> "FLI",
         INVALID_INSTR.litValue -> "INVALID",
       )
       strMap(immType.litValue)
@@ -753,6 +756,7 @@ package object xiangshan {
         IMM_VSETIVLI.litValue  -> ImmUnion.VSETIVLI,
         IMM_LUI32.litValue     -> ImmUnion.LUI32,
         IMM_VRORVI.litValue    -> ImmUnion.VRORVI,
+        IMM_FLI.litValue       -> ImmUnion.FLI,
       )
       iuMap(immType.litValue)
     }

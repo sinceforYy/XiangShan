@@ -34,6 +34,7 @@ import xiangshan.backend.decode.isa.bitfield.{InstVType, OPCODE5Bit, XSInstBitFi
 import xiangshan.backend.fu.vector.Bundles.{VType, Vl}
 import xiangshan.backend.fu.wrapper.CSRToDecode
 import xiangshan.backend.decode.Zimop._
+import xiangshan.backend.fu.fpu._
 import yunsuan.{VfaluType, VfcvtType}
 
 /**
@@ -717,6 +718,39 @@ case class Imm_VRORVI() extends Imm(6){
   }
 }
 
+case class Imm_FLI() extends Imm(7){
+  override def do_toImm32(minBits: UInt): UInt = {
+    val fmt = minBits(6, 5)
+    val rs1 = minBits(4, 0)
+
+    val isFliH =  fmt(1) && !fmt(0)
+    val isFliS = !fmt(1) && !fmt(0)
+    val isFliD = !fmt(1) &&  fmt(0)
+
+    val fliData = Wire(UInt(64.W))
+
+    val fliHTable = Module(new FliHTable)
+    val fliSTable = Module(new FliSTable)
+    val fliDTable = Module(new FliDTable)
+
+    fliHTable.src := rs1
+    fliSTable.src := rs1
+    fliDTable.src := rs1
+
+    fliData := Mux1H(Seq(
+      isFliH -> Cat(~0.U(48.W), fliHTable.out),
+      isFliS -> Cat(~0.U(32.W), fliSTable.out, 0.U(16.W)),
+      isFliD -> Cat(fliDTable.out, 0.U(48.W)),
+    ))
+    fliData
+  }
+
+  override def minBitsFromInstr(instr: UInt): UInt = {
+    0.U(7.W)
+  }
+
+}
+
 object ImmUnion {
   val I = Imm_I()
   val S = Imm_S()
@@ -731,9 +765,10 @@ object ImmUnion {
   val VSETIVLI = Imm_VSETIVLI()
   val LUI32 = Imm_LUI32()
   val VRORVI = Imm_VRORVI()
+  val FLI = Imm_FLI()
 
   // do not add special type lui32 to this, keep ImmUnion max len being 20.
-  val imms = Seq(I, S, B, U, J, Z, B6, OPIVIS, OPIVIU, VSETVLI, VSETIVLI, VRORVI)
+  val imms = Seq(I, S, B, U, J, Z, B6, OPIVIS, OPIVIU, VSETVLI, VSETIVLI, VRORVI, FLI)
   val maxLen = imms.maxBy(_.len).len
   val immSelMap = Seq(
     SelImm.IMM_I,
@@ -748,6 +783,7 @@ object ImmUnion {
     SelImm.IMM_VSETVLI,
     SelImm.IMM_VSETIVLI,
     SelImm.IMM_VRORVI,
+    SelImm.IMM_FLI,
   ).zip(imms)
   println(s"ImmUnion max len: $maxLen")
 }

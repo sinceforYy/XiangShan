@@ -289,6 +289,7 @@ object FuConfig {
     latency = CertainLatency(0),
     destDataBits = 128,
     srcDataBits = Some(64),
+    immType = Set(SelImm.IMM_FLI),
   )
 
   val CsrCfg: FuConfig = FuConfig (
@@ -704,6 +705,7 @@ object FuConfig {
     latency = CertainLatency(1),
     destDataBits = 64,
     needSrcFrm = true,
+    immType = Set(SelImm.IMM_FLI),
   )
 
   val FmacCfg = FuConfig(
@@ -719,6 +721,7 @@ object FuConfig {
     latency = CertainLatency(3),
     destDataBits = 64,
     needSrcFrm = true,
+    immType = Set(SelImm.IMM_FLI),
   )
 
   val FdivCfg = FuConfig(
@@ -734,6 +737,7 @@ object FuConfig {
     latency = UncertainLatency(),
     destDataBits = 64,
     needSrcFrm = true,
+    immType = Set(SelImm.IMM_FLI),
   )
 
   val FcvtCfg = FuConfig(
@@ -750,6 +754,7 @@ object FuConfig {
     latency = CertainLatency(2),
     destDataBits = 64,
     needSrcFrm = true,
+    immType = Set(SelImm.IMM_FLI),
   )
 
   val VlduCfg: FuConfig = FuConfig (
