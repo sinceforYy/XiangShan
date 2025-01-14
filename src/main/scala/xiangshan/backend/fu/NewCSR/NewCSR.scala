@@ -381,6 +381,11 @@ class NewCSR(implicit val p: Parameters) extends Module
   intrMod.io.in.debugMode := debugMode
   intrMod.io.in.debugIntr := debugIntr
   intrMod.io.in.dcsr      := dcsr.regOut
+  intrMod.io.in.platform.meip := platformIRP.MEIP
+  intrMod.io.in.platform.seip := platformIRP.SEIP
+  intrMod.io.in.fromAIA.meip := fromAIA.meip
+  intrMod.io.in.fromAIA.seip := fromAIA.seip
+
 
   when(intrMod.io.out.nmi && intrMod.io.out.interruptVec.valid) {
     nmip.NMI_31 := nmip.NMI_31 & !UIntToOH(intrMod.io.out.interruptVec.bits, 64)(NonMaskableIRNO.NMI_31)
@@ -514,6 +519,15 @@ class NewCSR(implicit val p: Parameters) extends Module
   siregiprios.foreach { mod =>
     mod.w.wen := sireg.w.wen && (siselect.regOut.ALL.asUInt === mod.addr.U)
     mod.w.wdata := wdata
+  }
+
+  iregiprios.foreach { mod =>
+    mod match {
+      case m: HasIeBundle =>
+        m.mie := mie.regOut
+        m.sie := sie.regOut
+      case _ =>
+    }
   }
 
   mhartid.hartid := this.io.fromTop.hartId
