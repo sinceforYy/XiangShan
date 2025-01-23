@@ -209,6 +209,19 @@ object CSRDefines {
 
       methodMirror
     }
+
+    def getCSRFieldMethodMirror(typeString: String, msb: Int, lsb: Int, init: Data): ru.MethodMirror = {
+      val moduleSymbol = mirror.typeOf[CSRDefines.type].termSymbol
+        .info.decl(ru.TermName(s"CSRField${msb - lsb + 1}Bits")).asModule
+
+      val methodSymbol = moduleSymbol
+        .info.member(ru.TermName(typeString)).asMethod
+
+      val instanceMirror: ru.InstanceMirror = mirror.reflect(mirror.reflectModule(moduleSymbol).instance)
+      val methodMirror: ru.MethodMirror = instanceMirror.reflectMethod(methodSymbol)
+
+      methodMirror
+    }
   }
 
   object CSRWARLField {
@@ -247,7 +260,15 @@ object CSRDefines {
       methodMirror.apply(msb, lsb).asInstanceOf[CSREnumType]
     }
 
+    private def helper(msb: Int, lsb: Int, init: Data): CSREnumType = {
+      println(s"rw helper add, msb=${msb}, lsb=${lsb}, init=${init.litValue}\n")
+      val methodMirror: ru.MethodMirror = ReflectHelper.getCSRFieldMethodMirror("RW", msb, lsb, init)
+      methodMirror.apply(msb, lsb, init).asInstanceOf[CSREnumType]
+    }
+
     def apply(msb: Int, lsb: Int) : CSREnumType = this.helper(msb, lsb)
+
+    def apply(msb: Int, lsb: Int, init: Data): CSREnumType = this.helper(msb, lsb, init)
 
     def apply(bit: Int): CSREnumType = this.helper(bit, bit)
   }

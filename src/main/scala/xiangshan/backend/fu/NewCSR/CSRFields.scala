@@ -131,14 +131,17 @@ class CSREnumType(
   var otherUpdateSeq: mutable.Seq[Tuple2[Bool, Data]] = mutable.Seq()
 
   if (factory.all.isEmpty) {
+    println("add min value\n")
     factory.asInstanceOf[CSREnum].addMinValue
   }
 
   if (this.init != null && !factory.all.exists(_.litValue == this.init.litValue)) {
+    println(s"begin add new Value ${this.init.litValue}\n")
     factory.asInstanceOf[CSREnum].addNewValue(init.asUInt)
   }
 
   if (!factory.all.exists(_.litValue == ((BigInt(1) << (msb - lsb + 1)) - 1))) {
+    println("add max value\n")
     factory.asInstanceOf[CSREnum].addMaxValue
   }
 
@@ -326,10 +329,11 @@ class CSREnumType(
 }
 
 class CSREnum extends ChiselEnum {
-  protected def apply(rwType: CSRRWType)(msb: Int, lsb: Int)(factory: ChiselEnum): CSREnumType = {
+  protected def apply(rwType: CSRRWType, init: Data = null)(msb: Int, lsb: Int)(factory: ChiselEnum): CSREnumType = {
+    println(s"csr enum apply add msb=${msb}, lsb=${lsb},init=${init}\n")
     this.msb = msb
     this.lsb = lsb
-    new CSREnumType(msb, lsb)(rwType, null)(factory)
+    new CSREnumType(msb, lsb)(rwType, init)(factory)
   }
 
   var msb, lsb: Int = 0
@@ -358,7 +362,9 @@ class CSREnum extends ChiselEnum {
    * @return this
    */
   def addNewValue(value: UInt): this.type = {
+    println("add new value\n")
     Value(value)
+    println("add new value end\n")
     this
   }
 
@@ -372,8 +378,15 @@ class CSREnum extends ChiselEnum {
 }
 
 trait RWApply { self: CSREnum =>
-  def apply(msb: Int, lsb: Int): CSREnumType = self
-    .apply(RWType())(msb, lsb)(this)
+  def apply(msb: Int, lsb: Int): CSREnumType = {
+    println("base RWApply")
+    self.apply(RWType())(msb, lsb)(this)
+  }
+
+  def apply(msb: Int, lsb: Int, init: Data): CSREnumType = {
+    println(s"RWApply, msb=${msb}, lsb=${lsb}, init=${init.litValue}")
+    self.apply(RWType(), init)(msb, lsb)(this)
+  }
 
   def apply(bit: Int): CSREnumType = apply(bit, bit)
 }
